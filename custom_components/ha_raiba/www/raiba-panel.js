@@ -68,7 +68,7 @@ class RaibaPanel extends HTMLElement {
           </div>
           <div class="header-actions">
             <ha-icon-button id="btn-mark-all" label="Alle gelesen/ungelesen">
-              <ha-icon icon="mdi:email-check"></ha-icon>
+              <ha-icon icon="mdi:check-all"></ha-icon>
             </ha-icon-button>
             <ha-icon-button id="btn-sync" label="Sync">
               <ha-icon icon="mdi:sync"></ha-icon>
@@ -303,10 +303,12 @@ class RaibaPanel extends HTMLElement {
         }
       }
       msg += totalNew > 0 ? `\n${totalNew} neue Buchungen` : "\nAlles aktuell";
-      this._hideSyncOverlay();
-      this._showToast("Sync abgeschlossen", "success");
-      alert("Sync abgeschlossen\n\n" + msg);
-      this._fetchTransactions();
+      // Show completion in same overlay, then dismiss
+      this._showSyncOverlay("✓ Sync abgeschlossen\n\n" + msg, 1.0);
+      setTimeout(() => {
+        this._hideSyncOverlay();
+        this._fetchTransactions();
+      }, 2000);
     } else if (status === "timeout") {
       this._stopPolling();
       this._syncing = false;
@@ -398,7 +400,6 @@ class RaibaPanel extends HTMLElement {
     header.innerHTML = `
       <div class="tx-header-title">${_esc(acc.label)}</div>
       ${saldoStr ? `<div class="tx-header-saldo">${saldoStr}</div>` : ""}
-      ${this._loading ? `<div class="loading-indicator">Laden…</div>` : ""}
     `;
   }
 
@@ -423,29 +424,50 @@ class RaibaPanel extends HTMLElement {
     const items = this._getFilteredTransactions();
 
     if (items.length === 0) {
-      list.innerHTML = `<div class="no-results">${this._loading ? "Laden…" : "Keine Umsätze"}</div>`;
+      list.innerHTML = `<div class="no-results">Keine Umsätze</div>`;
       return;
     }
 
-    // Group by date
-    const groups = {};
+    // Group by Heute / Gestern / Ältere Buchungen (like iOS app)
+    const today = this._isoDate(new Date());
+    const yesterday = this._isoDate(new Date(Date.now() - 86400000));
+
+    const groupHeute = [];
+    const groupGestern = [];
+    const groupAelter = [];
+
     for (const tx of items) {
-      const date = tx.Date || "Unbekannt";
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(tx);
+      const d = tx.Date || "";
+      if (d >= today) groupHeute.push(tx);
+      else if (d === yesterday) groupGestern.push(tx);
+      else groupAelter.push(tx);
     }
 
     let html = "";
-    for (const [date, txs] of Object.entries(groups)) {
-      const displayDate = this._formatDate(date);
-      html += `<div class="tx-date-group"><div class="tx-date-header">${_esc(displayDate)}</div>`;
-      for (const tx of txs) {
-        html += this._txItemHtml(tx);
-      }
+    if (groupHeute.length > 0) {
+      html += `<div class="tx-date-group"><div class="tx-date-header">Heute</div>`;
+      for (const tx of groupHeute) html += this._txItemHtml(tx);
+      html += `</div>`;
+    }
+    if (groupGestern.length > 0) {
+      html += `<div class="tx-date-group"><div class="tx-date-header">Gestern</div>`;
+      for (const tx of groupGestern) html += this._txItemHtml(tx);
+      html += `</div>`;
+    }
+    if (groupAelter.length > 0) {
+      html += `<div class="tx-date-group"><div class="tx-date-header">Ältere Buchungen</div>`;
+      for (const tx of groupAelter) html += this._txItemHtml(tx);
       html += `</div>`;
     }
 
     list.innerHTML = html;
+  }
+
+  _isoDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   }
 
   _txItemHtml(tx) {
@@ -506,7 +528,7 @@ class RaibaPanel extends HTMLElement {
           <ha-icon icon="mdi:arrow-left"></ha-icon> Zurück
         </button>
         <button class="btn-read-toggle" id="btn-read-toggle" title="Gelesen/Ungelesen">
-          <ha-icon icon="${tx.ReadAt ? 'mdi:email-open' : 'mdi:email'}"></ha-icon>
+          <ha-icon icon="${tx.ReadAt ? 'mdi:check-circle' : 'mdi:check-circle-outline'}"></ha-icon>
         </button>
       </div>
       <div class="detail-content">
@@ -635,10 +657,10 @@ class RaibaPanel extends HTMLElement {
       .shell { display: flex; flex-direction: column; height: 100%; background: var(--primary-background-color, #fafafa); color: var(--primary-text-color, #212121); }
 
       /* ── Header ── */
-      .header { display: flex; align-items: center; gap: 4px; padding: 8px 16px; background: var(--app-header-background-color, var(--primary)); color: var(--app-header-text-color, #fff); min-height: 56px; z-index: 10; }
+      .header { display: flex; align-items: center; gap: 4px; padding: 8px 16px; background: var(--app-header-background-color, var(--primary)); color: var(--app-header-text-color, #fff); min-height: 56px; z-index: 10; border-bottom: var(--app-header-border-bottom, 1px solid var(--divider-color, #e0e0e0)); }
       .header ha-icon-button { --mdc-icon-button-size: 40px; color: inherit; }
       #btn-header-back { display: none; }
-      .topbar-title { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 500; flex: 1; }
+      .topbar-title { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 20px; font-weight: 500; flex: 1; }
       .topbar-title ha-icon { --mdi-icon-size: 24px; }
       .header-actions { display: flex; gap: 4px; }
 
