@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Raiba – Bank Transactions",
+        "description": "Enter the connection details for your Raiba REST server.",
+        "data": {
+          "url": "Server URL",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to server. Check URL and credentials.",
+      "invalid_auth": "Invalid credentials (HTTP 401).",
+      "unknown": "Unknown error."
+    },
+    "abort": {
+      "already_configured": "This server is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HA Raiba Settings",
+        "data": {
+          "url": "Server URL",
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connection failed.",
+      "invalid_auth": "Invalid credentials."
+    }
+  }
+}

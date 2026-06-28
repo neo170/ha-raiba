@@ -1,0 +1,13 @@
+{
+  "domain": "ha_raiba",
+  "name": "HA Raiba",
+  "version": "0.0.1",
+  "documentation": "https://github.com/neo170/ha-raiba",
+  "issue_tracker": "https://github.com/neo170/ha-raiba/issues",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [],
+  "config_flow": true,
+  "iot_class": "cloud_polling",
+  "homeassistant": "2023.9.0"
+}

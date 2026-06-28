@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Raiba – Bankumsätze",
+        "description": "Gib die Verbindungsdaten deines Raiba REST-Servers ein.",
+        "data": {
+          "url": "Server-URL",
+          "username": "Benutzername",
+          "password": "Passwort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum Server fehlgeschlagen. URL und Zugangsdaten prüfen.",
+      "invalid_auth": "Ungültige Zugangsdaten (HTTP 401).",
+      "unknown": "Unbekannter Fehler."
+    },
+    "abort": {
+      "already_configured": "Dieser Server ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HA Raiba Einstellungen",
+        "data": {
+          "url": "Server-URL",
+          "username": "Benutzername",
+          "password": "Passwort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen.",
+      "invalid_auth": "Ungültige Zugangsdaten."
+    }
+  }
+}
