@@ -73,6 +73,9 @@ class RaibaPanel extends HTMLElement {
             <ha-icon-button id="btn-mark-all" label="Alle gelesen/ungelesen">
               <ha-icon icon="mdi:check-all"></ha-icon>
             </ha-icon-button>
+            <ha-icon-button id="btn-export" label="Excel Export">
+              <ha-icon icon="mdi:download"></ha-icon>
+            </ha-icon-button>
             <ha-icon-button id="btn-sync" label="Sync">
               <ha-icon icon="mdi:sync"></ha-icon>
             </ha-icon-button>
@@ -210,6 +213,7 @@ class RaibaPanel extends HTMLElement {
     root.getElementById("btn-header-back").addEventListener("click", () => this._backToList());
     root.getElementById("btn-sync").addEventListener("click", () => this._startSync());
     root.getElementById("btn-mark-all").addEventListener("click", () => this._markAllToggle());
+    root.getElementById("btn-export").addEventListener("click", () => this._exportExcel());
     root.getElementById("btn-sync-cancel").addEventListener("click", () => this._cancelSync());
 
     // Account list clicks
@@ -585,7 +589,7 @@ class RaibaPanel extends HTMLElement {
       const saldoStr = saldo.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const saldoClass = saldo >= 0 ? "amount-positive" : "amount-negative";
       const showSaldo = this._groupMode !== "standard";
-      html += `<div class="tx-date-group"><div class="tx-date-header">${g.label}${showSaldo ? `<span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div>`;
+      html += `<div class="tx-date-group"><div class="tx-date-header">${g.label}${showSaldo ? `: <span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div>`;
       for (const tx of g.items) html += this._txItemHtml(tx);
       html += `</div>`;
     }
@@ -865,6 +869,36 @@ class RaibaPanel extends HTMLElement {
     setTimeout(() => { toast.classList.remove("visible"); }, 3000);
   }
 
+  _exportExcel() {
+    const items = this._getFilteredTransactions();
+    if (!items.length) { this._showToast("Keine Daten zum Exportieren", "error"); return; }
+
+    // Build CSV with BOM for Excel
+    const sep = ";";
+    const header = ["Datum", "Name", "Beschreibung", "Betrag", "S/H", "Konto"];
+    let csv = "\uFEFF" + header.join(sep) + "\n";
+    for (const tx of items) {
+      const row = [
+        this._formatDate(tx.Date),
+        (tx.Name || "").replace(/;/g, ","),
+        (tx.Description || "").replace(/;/g, ",").replace(/\n/g, " "),
+        (tx.Amount || "").replace(".", ","),
+        tx.CreditDebit === "S" ? "Soll" : "Haben",
+        tx.OwnAccount || ""
+      ];
+      csv += row.join(sep) + "\n";
+    }
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `raiba-export-${this._isoDate(new Date())}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this._showToast(`${items.length} Buchungen exportiert`);
+  }
+
   // ── Styles ────────────────────────────────────────────────────────────────
 
   _styles() {
@@ -933,8 +967,8 @@ class RaibaPanel extends HTMLElement {
       .tx-list { flex: 1; overflow-y: auto; padding: 0 8px 16px; }
 
       .tx-date-group { margin-bottom: 8px; }
-      .tx-date-header { font-size: 12px; font-weight: 600; color: var(--secondary-text-color); padding: 8px 12px 4px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
-      .group-saldo { font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; margin-right: 12px; }
+      .tx-date-header { font-size: 12px; font-weight: 600; color: var(--secondary-text-color); padding: 8px 12px 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .group-saldo { font-weight: 600; text-transform: none; letter-spacing: 0; }
 
       .tx-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
       .tx-item:hover { background: var(--secondary-background-color, #f5f5f5); }
