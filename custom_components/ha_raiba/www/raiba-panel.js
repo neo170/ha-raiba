@@ -56,9 +56,6 @@ class RaibaPanel extends HTMLElement {
       <style>${this._styles()}</style>
       <div class="shell">
         <div class="header">
-          <ha-icon-button id="btn-menu" label="Menü">
-            <ha-icon icon="mdi:menu"></ha-icon>
-          </ha-icon-button>
           <ha-icon-button id="btn-header-back" label="Zurück">
             <ha-icon icon="mdi:arrow-left"></ha-icon>
           </ha-icon-button>
@@ -131,9 +128,6 @@ class RaibaPanel extends HTMLElement {
     });
 
     // Header buttons
-    root.getElementById("btn-menu").addEventListener("click", () => {
-      this.dispatchEvent(new CustomEvent('hass-toggle-menu', { bubbles: true, composed: true }));
-    });
     root.getElementById("btn-header-back").addEventListener("click", () => this._backToList());
     root.getElementById("btn-sync").addEventListener("click", () => this._startSync());
     root.getElementById("btn-mark-all").addEventListener("click", () => this._markAllToggle());
@@ -815,15 +809,42 @@ class RaibaPanel extends HTMLElement {
       .toast.success { background: var(--success-color, #388e3c); color: #fff; }
 
       /* ── Responsive (mobile) ── */
-      @media (max-width: 768px) {
-        .sidebar { position: absolute; left: 0; top: 56px; bottom: 0; z-index: 5; width: 100%; min-width: 100%; }
-        .detail { position: absolute; left: 0; top: 56px; bottom: 0; width: 100%; transform: translateX(100%); transition: transform 0.25s; z-index: 6; background: var(--primary-background-color, #fafafa); }
-        .shell.detail-open .detail { transform: translateX(0); }
-        .shell.detail-open #btn-header-back { display: block; }
-        .shell.detail-open #btn-menu { display: none; }
-      }
-      @media (min-width: 769px) {
-        #btn-header-back { display: none !important; }
+      #btn-header-back { display: none; }
+
+      @media (max-width: 640px) {
+        .body-layout { position: relative; overflow: hidden; }
+
+        .sidebar {
+          width: 100%;
+          min-width: 0;
+          border-right: none;
+          position: absolute;
+          inset: 0;
+          transform: translateX(0);
+          transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+          will-change: transform;
+          z-index: 2;
+        }
+
+        .detail {
+          width: 100%;
+          position: absolute;
+          inset: 0;
+          transform: translateX(100%);
+          transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+          will-change: transform;
+          background: var(--primary-background-color, #f5f5f5);
+          z-index: 3;
+          overflow-y: auto;
+          height: 100%;
+        }
+
+        .shell.detail-open .sidebar { transform: translateX(-100%); }
+        .shell.detail-open .detail  { transform: translateX(0); }
+
+        .shell.detail-open #btn-header-back { display: inline-flex; }
+        .shell.detail-open .topbar-title { display: none; }
+        .shell.detail-open .header > .header-actions { display: none; }
       }
     `;
   }
