@@ -56,6 +56,9 @@ class RaibaPanel extends HTMLElement {
       <style>${this._styles()}</style>
       <div class="shell">
         <div class="header">
+          <ha-icon-button id="btn-menu" label="Menü">
+            <ha-icon icon="mdi:menu"></ha-icon>
+          </ha-icon-button>
           <ha-icon-button id="btn-header-back" label="Zurück">
             <ha-icon icon="mdi:arrow-left"></ha-icon>
           </ha-icon-button>
@@ -128,6 +131,9 @@ class RaibaPanel extends HTMLElement {
     });
 
     // Header buttons
+    root.getElementById("btn-menu").addEventListener("click", () => {
+      this.dispatchEvent(new CustomEvent('hass-toggle-menu', { bubbles: true, composed: true }));
+    });
     root.getElementById("btn-header-back").addEventListener("click", () => this._backToList());
     root.getElementById("btn-sync").addEventListener("click", () => this._startSync());
     root.getElementById("btn-mark-all").addEventListener("click", () => this._markAllToggle());
@@ -140,6 +146,7 @@ class RaibaPanel extends HTMLElement {
         this._selectedTab = parseInt(item.dataset.tab, 10);
         this._selectedTx = null;
         this._fetchTransactions();
+        this._openDetail();
       }
     });
 
@@ -627,13 +634,19 @@ class RaibaPanel extends HTMLElement {
     const listContainer = this.shadowRoot.getElementById("tx-list-container");
     detail.style.display = "none";
     listContainer.style.display = "";
-    this.shadowRoot.querySelector(".shell")?.classList.remove("detail-open");
+    // Don't remove detail-open here — stay on tx list (mobile)
+  }
+
+  _openDetail() {
+    this.shadowRoot.querySelector(".shell")?.classList.add("detail-open");
   }
 
   _backToList() {
     if (this._selectedTx) {
+      // From tx detail back to tx list
       this._hideDetail();
     } else {
+      // From tx list back to account list (mobile)
       this.shadowRoot.querySelector(".shell")?.classList.remove("detail-open");
     }
   }
@@ -810,6 +823,7 @@ class RaibaPanel extends HTMLElement {
 
       /* ── Responsive (mobile) ── */
       #btn-header-back { display: none; }
+      #btn-menu { display: none; }
 
       @media (max-width: 640px) {
         .body-layout { position: relative; overflow: hidden; }
@@ -842,6 +856,8 @@ class RaibaPanel extends HTMLElement {
         .shell.detail-open .sidebar { transform: translateX(-100%); }
         .shell.detail-open .detail  { transform: translateX(0); }
 
+        #btn-menu { display: inline-flex; }
+        .shell.detail-open #btn-menu { display: none; }
         .shell.detail-open #btn-header-back { display: inline-flex; }
         .shell.detail-open .topbar-title { display: none; }
         .shell.detail-open .header > .header-actions { display: none; }
