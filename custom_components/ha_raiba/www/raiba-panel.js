@@ -23,6 +23,8 @@ class RaibaPanel extends HTMLElement {
     this._selectedTab = 0;
     this._selectedTx = null;
     this._search = "";
+    this._dateFrom = "";
+    this._dateTo = "";
     this._loading = false;
     this._syncing = false;
     this._syncSessionId = null;
@@ -85,6 +87,10 @@ class RaibaPanel extends HTMLElement {
                   <ha-icon icon="mdi:close"></ha-icon>
                 </button>
               </div>
+              <div class="date-filter-row">
+                <input id="date-from" type="date" title="Datum von">
+                <input id="date-to" type="date" title="Datum bis">
+              </div>
             </div>
             <div class="account-list" id="account-list"></div>
           </aside>
@@ -128,6 +134,18 @@ class RaibaPanel extends HTMLElement {
       this._renderTxHeader();
       searchWrap.classList.remove("has-value");
       searchEl.focus();
+    });
+
+    // Date range filters
+    root.getElementById("date-from").addEventListener("change", (e) => {
+      this._dateFrom = e.target.value;
+      this._renderTxList();
+      this._renderTxHeader();
+    });
+    root.getElementById("date-to").addEventListener("change", (e) => {
+      this._dateTo = e.target.value;
+      this._renderTxList();
+      this._renderTxHeader();
     });
 
     // Header buttons
@@ -443,7 +461,7 @@ class RaibaPanel extends HTMLElement {
     if (!header) return;
     const acc = ACCOUNTS[this._selectedTab];
     let saldoStr = "";
-    if (this._search) {
+    if (this._hasActiveFilters()) {
       // During search: sum of filtered entries
       const filtered = this._getFilteredTransactions();
       let sum = 0;
@@ -463,17 +481,30 @@ class RaibaPanel extends HTMLElement {
   }
 
   _getFilteredTransactions() {
-    if (!this._search) return this._transactions;
-    const q = this._search.toLowerCase();
-    return this._transactions.filter(tx =>
-      (tx.Name || "").toLowerCase().includes(q) ||
-      (tx.Date || "").toLowerCase().includes(q) ||
-      (tx.BookingDate || "").toLowerCase().includes(q) ||
-      (tx.Amount || "").toLowerCase().includes(q) ||
-      (tx.Description || "").toLowerCase().includes(q) ||
-      (tx.AccountNumber || "").toLowerCase().includes(q) ||
-      (tx.OwnAccount || "").toLowerCase().includes(q)
-    );
+    let items = this._transactions;
+    if (this._search) {
+      const q = this._search.toLowerCase();
+      items = items.filter(tx =>
+        (tx.Name || "").toLowerCase().includes(q) ||
+        (tx.Date || "").toLowerCase().includes(q) ||
+        (tx.BookingDate || "").toLowerCase().includes(q) ||
+        (tx.Amount || "").toLowerCase().includes(q) ||
+        (tx.Description || "").toLowerCase().includes(q) ||
+        (tx.AccountNumber || "").toLowerCase().includes(q) ||
+        (tx.OwnAccount || "").toLowerCase().includes(q)
+      );
+    }
+    if (this._dateFrom) {
+      items = items.filter(tx => (tx.Date || "") >= this._dateFrom);
+    }
+    if (this._dateTo) {
+      items = items.filter(tx => (tx.Date || "") <= this._dateTo);
+    }
+    return items;
+  }
+
+  _hasActiveFilters() {
+    return !!(this._search || this._dateFrom || this._dateTo);
   }
 
   _renderTxList() {
@@ -746,6 +777,10 @@ class RaibaPanel extends HTMLElement {
       .search-clear { display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; padding: 0; color: var(--secondary-text-color, #757575); align-items: center; justify-content: center; width: 22px; height: 22px; }
       .search-clear ha-icon { transform: scale(0.58); }
       .search-wrap.has-value .search-clear { display: flex; }
+
+      .date-filter-row { display: flex; gap: 8px; margin-top: 8px; }
+      .date-filter-row input { flex: 1; padding: 5px 8px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 8px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 12px; outline: none; box-sizing: border-box; }
+      .date-filter-row input:focus { border-color: var(--primary-color, #03a9f4); }
 
       .account-list { flex: 1; overflow-y: auto; padding: 8px 0; }
       .account-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; }
