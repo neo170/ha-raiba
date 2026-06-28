@@ -545,11 +545,15 @@ class RaibaPanel extends HTMLElement {
   _showDetail(tx) {
     this._selectedTx = tx;
 
-    // Mark as read
+    // Mark as read on first open
     if (!tx.ReadAt) {
       this._markRead(tx.Id);
     }
 
+    this._renderDetailView(tx);
+  }
+
+  _renderDetailView(tx) {
     const detail = this.shadowRoot.getElementById("tx-detail");
     const listContainer = this.shadowRoot.getElementById("tx-list-container");
 
@@ -605,8 +609,8 @@ class RaibaPanel extends HTMLElement {
       await this._markRead(tx.Id);
       tx.ReadAt = "now";
     }
-    // Re-render detail to update icon
-    this._showDetail(tx);
+    // Re-render detail without triggering auto-markRead
+    this._renderDetailView(tx);
   }
 
   _hideDetail() {
