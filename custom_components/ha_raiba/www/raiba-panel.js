@@ -90,10 +90,12 @@ class RaibaPanel extends HTMLElement {
               <div class="date-filter-row">
                 <div class="date-wrap" id="date-from-wrap">
                   <input id="date-from" type="text" placeholder="von…" title="Datum von" readonly>
+                  <input id="date-from-picker" type="date" class="date-picker-hidden">
                   <button class="date-clear" id="date-from-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
                 </div>
                 <div class="date-wrap" id="date-to-wrap">
                   <input id="date-to" type="text" placeholder="bis…" title="Datum bis" readonly>
+                  <input id="date-to-picker" type="date" class="date-picker-hidden">
                   <button class="date-clear" id="date-to-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
                 </div>
               </div>
@@ -145,33 +147,34 @@ class RaibaPanel extends HTMLElement {
     // Date range filters
     const dateFromEl = root.getElementById("date-from");
     const dateToEl = root.getElementById("date-to");
+    const dateFromPicker = root.getElementById("date-from-picker");
+    const dateToPicker = root.getElementById("date-to-picker");
     const dateFromWrap = root.getElementById("date-from-wrap");
     const dateToWrap = root.getElementById("date-to-wrap");
 
-    dateFromEl.addEventListener("click", () => { dateFromEl.type = "date"; dateFromEl.showPicker(); });
-    dateToEl.addEventListener("click", () => { dateToEl.type = "date"; dateToEl.showPicker(); });
-    dateFromEl.addEventListener("keydown", (e) => e.preventDefault());
-    dateToEl.addEventListener("keydown", (e) => e.preventDefault());
+    dateFromEl.addEventListener("click", () => dateFromPicker.showPicker());
+    dateToEl.addEventListener("click", () => dateToPicker.showPicker());
 
-    dateFromEl.addEventListener("blur", () => { if (!dateFromEl.value) dateFromEl.type = "text"; });
-    dateToEl.addEventListener("blur", () => { if (!dateToEl.value) dateToEl.type = "text"; });
-
-    dateFromEl.addEventListener("change", (e) => {
-      this._dateFrom = e.target.value;
-      dateFromWrap.classList.toggle("has-value", !!this._dateFrom);
+    dateFromPicker.addEventListener("change", (e) => {
+      const v = e.target.value;
+      this._dateFrom = v;
+      dateFromEl.value = v ? this._formatDateDE(v) : "";
+      dateFromWrap.classList.toggle("has-value", !!v);
       this._renderTxList();
       this._renderTxHeader();
     });
-    dateToEl.addEventListener("change", (e) => {
-      this._dateTo = e.target.value;
-      dateToWrap.classList.toggle("has-value", !!this._dateTo);
+    dateToPicker.addEventListener("change", (e) => {
+      const v = e.target.value;
+      this._dateTo = v;
+      dateToEl.value = v ? this._formatDateDE(v) : "";
+      dateToWrap.classList.toggle("has-value", !!v);
       this._renderTxList();
       this._renderTxHeader();
     });
     root.getElementById("date-from-clear").addEventListener("click", (e) => {
       e.stopPropagation();
       dateFromEl.value = "";
-      dateFromEl.type = "text";
+      dateFromPicker.value = "";
       this._dateFrom = "";
       dateFromWrap.classList.remove("has-value");
       this._renderTxList();
@@ -180,7 +183,7 @@ class RaibaPanel extends HTMLElement {
     root.getElementById("date-to-clear").addEventListener("click", (e) => {
       e.stopPropagation();
       dateToEl.value = "";
-      dateToEl.type = "text";
+      dateToPicker.value = "";
       this._dateTo = "";
       dateToWrap.classList.remove("has-value");
       this._renderTxList();
@@ -546,6 +549,11 @@ class RaibaPanel extends HTMLElement {
     return !!(this._search || this._dateFrom || this._dateTo);
   }
 
+  _formatDateDE(iso) {
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y}`;
+  }
+
   _renderTxList() {
     const list = this.shadowRoot.getElementById("tx-list");
     if (!list) return;
@@ -819,9 +827,10 @@ class RaibaPanel extends HTMLElement {
 
       .date-filter-row { display: flex; gap: 8px; margin-top: 8px; }
       .date-wrap { position: relative; flex: 1; }
-      .date-wrap input { width: 100%; padding: 5px 26px 5px 8px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 8px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 12px; outline: none; box-sizing: border-box; cursor: pointer; }
-      .date-wrap input:focus { border-color: var(--primary-color, #03a9f4); }
-      .date-wrap input::-webkit-calendar-picker-indicator { display: none; }
+      .date-picker-hidden { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; overflow: hidden; }
+      .date-wrap input[type="text"] { width: 100%; padding: 5px 26px 5px 8px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 8px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 12px; outline: none; box-sizing: border-box; cursor: pointer; }
+      .date-wrap input[type="text"]:focus { border-color: var(--primary-color, #03a9f4); }
+      .date-wrap input[type="text"]::placeholder { color: var(--secondary-text-color, #757575); opacity: 0.7; }
       .date-clear { display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; padding: 0; color: var(--secondary-text-color, #757575); align-items: center; justify-content: center; width: 18px; height: 18px; }
       .date-clear ha-icon { transform: scale(0.5); }
       .date-wrap.has-value .date-clear { display: flex; }
