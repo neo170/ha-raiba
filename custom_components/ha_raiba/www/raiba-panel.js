@@ -89,11 +89,11 @@ class RaibaPanel extends HTMLElement {
               </div>
               <div class="date-filter-row">
                 <div class="date-wrap" id="date-from-wrap">
-                  <input id="date-from" type="date" title="Datum von">
+                  <input id="date-from" type="text" placeholder="von…" title="Datum von" readonly>
                   <button class="date-clear" id="date-from-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
                 </div>
                 <div class="date-wrap" id="date-to-wrap">
-                  <input id="date-to" type="date" title="Datum bis">
+                  <input id="date-to" type="text" placeholder="bis…" title="Datum bis" readonly>
                   <button class="date-clear" id="date-to-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
                 </div>
               </div>
@@ -148,10 +148,13 @@ class RaibaPanel extends HTMLElement {
     const dateFromWrap = root.getElementById("date-from-wrap");
     const dateToWrap = root.getElementById("date-to-wrap");
 
-    dateFromEl.addEventListener("click", () => dateFromEl.showPicker());
-    dateToEl.addEventListener("click", () => dateToEl.showPicker());
+    dateFromEl.addEventListener("click", () => { dateFromEl.type = "date"; dateFromEl.showPicker(); });
+    dateToEl.addEventListener("click", () => { dateToEl.type = "date"; dateToEl.showPicker(); });
     dateFromEl.addEventListener("keydown", (e) => e.preventDefault());
     dateToEl.addEventListener("keydown", (e) => e.preventDefault());
+
+    dateFromEl.addEventListener("blur", () => { if (!dateFromEl.value) dateFromEl.type = "text"; });
+    dateToEl.addEventListener("blur", () => { if (!dateToEl.value) dateToEl.type = "text"; });
 
     dateFromEl.addEventListener("change", (e) => {
       this._dateFrom = e.target.value;
@@ -168,6 +171,7 @@ class RaibaPanel extends HTMLElement {
     root.getElementById("date-from-clear").addEventListener("click", (e) => {
       e.stopPropagation();
       dateFromEl.value = "";
+      dateFromEl.type = "text";
       this._dateFrom = "";
       dateFromWrap.classList.remove("has-value");
       this._renderTxList();
@@ -176,6 +180,7 @@ class RaibaPanel extends HTMLElement {
     root.getElementById("date-to-clear").addEventListener("click", (e) => {
       e.stopPropagation();
       dateToEl.value = "";
+      dateToEl.type = "text";
       this._dateTo = "";
       dateToWrap.classList.remove("has-value");
       this._renderTxList();
