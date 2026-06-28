@@ -1,6 +1,7 @@
 """REST API views for HA Raiba — proxy requests to the PHP backend."""
 from __future__ import annotations
 
+import json
 import logging
 from http import HTTPStatus
 
@@ -29,6 +30,13 @@ def _base_url(config: dict) -> str:
     return config[CONF_URL].rstrip("/")
 
 
+async def _parse_json(resp: aiohttp.ClientResponse):
+    """Read response and parse JSON, stripping UTF-8 BOM if present."""
+    raw = await resp.read()
+    text = raw.decode("utf-8-sig")
+    return json.loads(text)
+
+
 class RaibaTransactionsView(HomeAssistantView):
     """GET /api/raiba/transactions?tab=N"""
 
@@ -50,7 +58,7 @@ class RaibaTransactionsView(HomeAssistantView):
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=30)) as resp:
                     if resp.status != 200:
                         return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
-                    data = await resp.json(content_type=None)
+                    data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
             _LOGGER.error("RaibaTransactionsView error: %s", err)
@@ -76,7 +84,7 @@ class RaibaMarkReadView(HomeAssistantView):
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    data = await resp.json(content_type=None)
+                    data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
             return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
@@ -102,7 +110,7 @@ class RaibaMarkIdsView(HomeAssistantView):
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    data = await resp.json(content_type=None)
+                    data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
             return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
@@ -129,7 +137,7 @@ class RaibaMarkAllReadView(HomeAssistantView):
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    data = await resp.json(content_type=None)
+                    data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
             return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
@@ -156,7 +164,7 @@ class RaibaMarkAllUnreadView(HomeAssistantView):
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    data = await resp.json(content_type=None)
+                    data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
             return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
@@ -182,7 +190,7 @@ class RaibaSyncStartView(HomeAssistantView):
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=60)) as resp:
                     if resp.status != 200:
                         return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
-                    data = await resp.json(content_type=None)
+                    data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
             _LOGGER.error("RaibaSyncStartView error: %s", err)
@@ -213,7 +221,7 @@ class RaibaSyncStatusView(HomeAssistantView):
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=30)) as resp:
                     if resp.status != 200:
                         return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
-                    data = await resp.json(content_type=None)
+                    data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
             _LOGGER.error("RaibaSyncStatusView error: %s", err)
