@@ -80,7 +80,7 @@ class RaibaPanel extends HTMLElement {
             <div class="sidebar-toolbar">
               <div class="search-wrap" id="search-wrap">
                 <ha-icon class="search-icon" icon="mdi:magnify"></ha-icon>
-                <input id="search" type="text" placeholder="Suchen…" autocomplete="off">
+                <input id="search" type="search" placeholder="Suchen…" autocomplete="off">
                 <button id="btn-search-clear" class="search-clear" title="Zurücksetzen">
                   <ha-icon icon="mdi:close"></ha-icon>
                 </button>
@@ -732,13 +732,14 @@ class RaibaPanel extends HTMLElement {
       /* ── Sidebar ── */
       .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); display: flex; flex-direction: column; border-right: 1px solid var(--divider-color, #e0e0e0); background: var(--card-background-color, #fff); overflow-y: auto; }
       .sidebar-toolbar { padding: 12px; border-bottom: 1px solid var(--divider-color, #e0e0e0); }
-      .search-wrap { position: relative; display: flex; align-items: center; }
-      .search-wrap .search-icon { position: absolute; left: 10px; --mdi-icon-size: 18px; color: var(--secondary-text-color, #757575); pointer-events: none; }
-      .search-wrap input { width: 100%; padding: 8px 36px 8px 36px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 20px; font-size: 14px; outline: none; background: var(--primary-background-color, #fafafa); color: var(--primary-text-color); }
-      .search-wrap input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
-      .search-wrap input:focus { border-color: var(--primary); }
-      .search-clear { position: absolute; right: 6px; background: none; border: none; cursor: pointer; padding: 4px; display: none; color: var(--secondary-text-color); }
-      .search-wrap.has-value .search-clear { display: block; }
+      .search-wrap { position: relative; flex: 1; }
+      .search-wrap .search-icon { position: absolute; left: 5px; top: 50%; transform: translateY(-50%) scale(0.58); transform-origin: left center; opacity: .5; pointer-events: none; }
+      #search { width: 100%; padding: 6px 30px 6px 26px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 20px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 13px; outline: none; box-sizing: border-box; }
+      #search:focus { border-color: var(--primary); }
+      #search::-webkit-search-cancel-button { display: none; }
+      .search-clear { display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; padding: 0; color: var(--secondary-text-color, #757575); align-items: center; justify-content: center; width: 22px; height: 22px; }
+      .search-clear ha-icon { transform: scale(0.58); }
+      .search-wrap.has-value .search-clear { display: flex; }
 
       .account-list { flex: 1; overflow-y: auto; padding: 8px 0; }
       .account-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; }
