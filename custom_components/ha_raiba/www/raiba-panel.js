@@ -104,10 +104,10 @@ class RaibaPanel extends HTMLElement {
                 </div>
               </div>
               <select id="group-mode" class="group-select">
-                <option value="standard">Standard</option>
-                <option value="weekly">Wöchentlich</option>
-                <option value="monthly">Monatlich</option>
-                <option value="yearly">Jährlich</option>
+                <option value="standard">Gruppierung: Standard</option>
+                <option value="weekly">Gruppierung: Wöchentlich</option>
+                <option value="monthly">Gruppierung: Monatlich</option>
+                <option value="yearly">Gruppierung: Jährlich</option>
               </select>
             </div>
             <div class="account-list" id="account-list"></div>
