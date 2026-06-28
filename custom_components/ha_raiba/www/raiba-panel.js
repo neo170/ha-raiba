@@ -873,30 +873,38 @@ class RaibaPanel extends HTMLElement {
     const items = this._getFilteredTransactions();
     if (!items.length) { this._showToast("Keine Daten zum Exportieren", "error"); return; }
 
-    // Build CSV with BOM for Excel
-    const sep = ";";
-    const header = ["Datum", "Name", "Beschreibung", "Betrag", "S/H", "Konto"];
-    let csv = "\uFEFF" + header.join(sep) + "\n";
-    for (const tx of items) {
-      const row = [
-        this._formatDate(tx.Date),
-        (tx.Name || "").replace(/;/g, ","),
-        (tx.Description || "").replace(/;/g, ",").replace(/\n/g, " "),
-        (tx.Amount || "").replace(".", ","),
-        tx.CreditDebit === "S" ? "Soll" : "Haben",
-        tx.OwnAccount || ""
-      ];
-      csv += row.join(sep) + "\n";
-    }
+    const doExport = (XLSX) => {
+      const data = items.map(tx => ({
+        Datum: this._formatDate(tx.Date),
+        Name: tx.Name || "",
+        Beschreibung: (tx.Description || "").replace(/\n/g, " "),
+        Betrag: parseFloat(tx.Amount) || 0,
+        "S/H": tx.CreditDebit === "S" ? "Soll" : "Haben",
+        Konto: tx.OwnAccount || ""
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      // Format Betrag column as number with 2 decimals
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+      for (let r = 1; r <= range.e.r; r++) {
+        const cell = ws[XLSX.utils.encode_cell({ r, c: 3 })];
+        if (cell) cell.z = "#,##0.00";
+      }
+      ws["!cols"] = [{ wch: 12 }, { wch: 30 }, { wch: 50 }, { wch: 12 }, { wch: 6 }, { wch: 15 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Umsätze");
+      XLSX.writeFile(wb, `raiba-export-${this._isoDate(new Date())}.xlsx`);
+      this._showToast(`${items.length} Buchungen exportiert`);
+    };
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `raiba-export-${this._isoDate(new Date())}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    this._showToast(`${items.length} Buchungen exportiert`);
+    if (window.XLSX) {
+      doExport(window.XLSX);
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+      script.onload = () => doExport(window.XLSX);
+      script.onerror = () => this._showToast("Excel-Bibliothek konnte nicht geladen werden", "error");
+      document.head.appendChild(script);
+    }
   }
 
   // ── Styles ────────────────────────────────────────────────────────────────
