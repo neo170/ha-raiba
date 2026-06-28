@@ -118,12 +118,14 @@ class RaibaPanel extends HTMLElement {
     searchEl.addEventListener("input", (e) => {
       this._search = e.target.value;
       this._renderTxList();
+      this._renderTxHeader();
       searchWrap.classList.toggle("has-value", !!e.target.value);
     });
     root.getElementById("btn-search-clear").addEventListener("click", () => {
       searchEl.value = "";
       this._search = "";
       this._renderTxList();
+      this._renderTxHeader();
       searchWrap.classList.remove("has-value");
       searchEl.focus();
     });
@@ -439,8 +441,20 @@ class RaibaPanel extends HTMLElement {
     const header = this.shadowRoot.getElementById("tx-header");
     if (!header) return;
     const acc = ACCOUNTS[this._selectedTab];
-    const saldo = acc.konto ? this._saldos[acc.konto] : this._saldos["Gesamt"];
-    const saldoStr = saldo ? this._formatAmount(saldo) + " €" : "";
+    let saldoStr = "";
+    if (this._search) {
+      // During search: sum of filtered entries
+      const filtered = this._getFilteredTransactions();
+      let sum = 0;
+      for (const tx of filtered) {
+        const val = parseFloat(tx.Amount) || 0;
+        sum += tx.CreditDebit === "S" ? -val : val;
+      }
+      saldoStr = this._formatAmount(sum.toFixed(2)) + " \u20ac";
+    } else {
+      const saldo = acc.konto ? this._saldos[acc.konto] : this._saldos["Gesamt"];
+      saldoStr = saldo ? this._formatAmount(saldo) + " \u20ac" : "";
+    }
     header.innerHTML = `
       <div class="tx-header-title">${_esc(acc.label)}</div>
       ${saldoStr ? `<div class="tx-header-saldo">${saldoStr}</div>` : ""}
