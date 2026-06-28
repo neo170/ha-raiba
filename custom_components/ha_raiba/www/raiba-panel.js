@@ -89,12 +89,12 @@ class RaibaPanel extends HTMLElement {
               </div>
               <div class="date-filter-row">
                 <div class="date-wrap" id="date-from-wrap">
-                  <input id="date-from" type="text" placeholder="von…" title="Datum von" readonly>
+                  <input id="date-from" class="date-input" type="text" placeholder="von…" title="Datum von" readonly>
                   <input id="date-from-picker" type="date" class="date-picker-hidden">
                   <button class="date-clear" id="date-from-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
                 </div>
                 <div class="date-wrap" id="date-to-wrap">
-                  <input id="date-to" type="text" placeholder="bis…" title="Datum bis" readonly>
+                  <input id="date-to" class="date-input" type="text" placeholder="bis…" title="Datum bis" readonly>
                   <input id="date-to-picker" type="date" class="date-picker-hidden">
                   <button class="date-clear" id="date-to-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
                 </div>
@@ -828,9 +828,9 @@ class RaibaPanel extends HTMLElement {
       .date-filter-row { display: flex; gap: 8px; margin-top: 8px; }
       .date-wrap { position: relative; flex: 1; }
       .date-picker-hidden { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; overflow: hidden; }
-      .date-wrap input[type="text"] { width: 100%; padding: 6px 30px 6px 10px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 20px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 13px; outline: none; box-sizing: border-box; cursor: pointer; }
-      .date-wrap input[type="text"]:focus { border-color: var(--primary-color, #03a9f4); }
-      .date-wrap input[type="text"]::placeholder { color: var(--secondary-text-color, #757575); opacity: 0.7; }
+      .date-input { width: 100%; padding: 6px 30px 6px 10px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 20px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 13px; outline: none; box-sizing: border-box; cursor: pointer; line-height: normal; }
+      .date-input:focus { border-color: var(--primary-color, #03a9f4); }
+      .date-input::placeholder { color: var(--secondary-text-color, #757575); opacity: 0.7; }
       .date-clear { display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; padding: 0; color: var(--secondary-text-color, #757575); align-items: center; justify-content: center; width: 18px; height: 18px; }
       .date-clear ha-icon { transform: scale(0.5); }
       .date-wrap.has-value .date-clear { display: flex; }
