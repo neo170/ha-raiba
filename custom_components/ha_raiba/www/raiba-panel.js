@@ -80,7 +80,7 @@ class RaibaPanel extends HTMLElement {
             <div class="sidebar-toolbar">
               <div class="search-wrap" id="search-wrap">
                 <ha-icon class="search-icon" icon="mdi:magnify"></ha-icon>
-                <input id="search" type="search" placeholder="Suchen…" autocomplete="off">
+                <input id="search" type="text" placeholder="Suchen…" autocomplete="off">
                 <button id="btn-search-clear" class="search-clear" title="Zurücksetzen">
                   <ha-icon icon="mdi:close"></ha-icon>
                 </button>
