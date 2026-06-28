@@ -183,8 +183,10 @@ class RaibaPanel extends HTMLElement {
     try {
       await this._callApi("GET", `raiba/mark_read?id=${id}`);
       const tx = this._transactions.find(t => t.Id === id);
-      if (tx) tx.ReadAt = "now";
-      this._updateUnreadCount(id, true);
+      if (tx && !tx.ReadAt) {
+        tx.ReadAt = "now";
+        this._adjustUnreadCount(tx.OwnAccount, -1);
+      }
       this._renderTxList();
       this._renderAccountList();
     } catch (err) {
@@ -197,7 +199,12 @@ class RaibaPanel extends HTMLElement {
       await this._callApi("GET", `raiba/mark_ids?ids=${ids.join(",")}&read=${read ? 1 : 0}`);
       for (const id of ids) {
         const tx = this._transactions.find(t => t.Id === id);
-        if (tx) tx.ReadAt = read ? "now" : null;
+        if (tx) {
+          const wasUnread = !tx.ReadAt;
+          tx.ReadAt = read ? "now" : null;
+          if (read && wasUnread) this._adjustUnreadCount(tx.OwnAccount, -1);
+          if (!read && !wasUnread) this._adjustUnreadCount(tx.OwnAccount, 1);
+        }
       }
       this._renderTxList();
       this._renderAccountList();
@@ -220,7 +227,19 @@ class RaibaPanel extends HTMLElement {
         const konto = account.konto || "";
         try {
           await this._callApi("GET", `raiba/mark_all_read${konto ? "?konto=" + konto : ""}`);
-          for (const tx of this._transactions) tx.ReadAt = tx.ReadAt || "now";
+          for (const tx of this._transactions) {
+            if (!tx.ReadAt) {
+              tx.ReadAt = "now";
+            }
+          }
+          // Reset unread counts
+          if (konto) {
+            const oldCount = this._unreadCounts[konto] || 0;
+            this._unreadCounts[konto] = 0;
+            this._unreadCounts["Gesamt"] = Math.max(0, (this._unreadCounts["Gesamt"] || 0) - oldCount);
+          } else {
+            for (const key of Object.keys(this._unreadCounts)) this._unreadCounts[key] = 0;
+          }
           this._renderTxList();
           this._renderAccountList();
           this._showToast("Alle als gelesen markiert", "success");
@@ -238,7 +257,16 @@ class RaibaPanel extends HTMLElement {
         const konto = account.konto || "";
         try {
           await this._callApi("GET", `raiba/mark_all_unread${konto ? "?konto=" + konto : ""}`);
+          const count = this._transactions.filter(tx => tx.ReadAt).length;
           for (const tx of this._transactions) tx.ReadAt = null;
+          // Update unread counts
+          if (konto) {
+            this._unreadCounts[konto] = (this._unreadCounts[konto] || 0) + count;
+            this._unreadCounts["Gesamt"] = (this._unreadCounts["Gesamt"] || 0) + count;
+          } else {
+            // Recalculate all from transactions
+            this._recalcUnreadCounts();
+          }
           this._renderTxList();
           this._renderAccountList();
           this._showToast("Alle als ungelesen markiert", "success");
@@ -249,13 +277,28 @@ class RaibaPanel extends HTMLElement {
     }
   }
 
-  _updateUnreadCount(id, read) {
-    // Recalculate from local data
-    let total = 0;
-    for (const tx of this._transactions) {
-      if (!tx.ReadAt) total++;
+  _adjustUnreadCount(ownAccount, delta) {
+    if (ownAccount) {
+      this._unreadCounts[ownAccount] = Math.max(0, (this._unreadCounts[ownAccount] || 0) + delta);
     }
-    this._unreadCounts["Gesamt"] = total;
+    this._unreadCounts["Gesamt"] = Math.max(0, (this._unreadCounts["Gesamt"] || 0) + delta);
+  }
+
+  _recalcUnreadCounts() {
+    const counts = { "Gesamt": 0 };
+    for (const tx of this._transactions) {
+      if (!tx.ReadAt) {
+        counts["Gesamt"]++;
+        if (tx.OwnAccount) {
+          counts[tx.OwnAccount] = (counts[tx.OwnAccount] || 0) + 1;
+        }
+      }
+    }
+    // Merge: keep existing keys, overwrite with new values
+    for (const key of Object.keys(this._unreadCounts)) {
+      if (!(key in counts)) counts[key] = 0;
+    }
+    this._unreadCounts = counts;
   }
 
   // ── Sync (2FA flow) ───────────────────────────────────────────────────────
@@ -377,11 +420,12 @@ class RaibaPanel extends HTMLElement {
       const unread = acc.konto
         ? (this._unreadCounts[acc.konto] || 0)
         : (this._unreadCounts["Gesamt"] || 0);
+      const hasUnread = unread > 0 ? " has-unread" : "";
       const badge = unread > 0 ? `<span class="badge">${unread}</span>` : "";
       const saldoStr = saldo ? this._formatAmount(saldo) : "";
 
       return `
-        <div class="account-item${active}" data-tab="${acc.tab}">
+        <div class="account-item${active}${hasUnread}" data-tab="${acc.tab}">
           <ha-icon icon="${acc.icon}"></ha-icon>
           <div class="account-info">
             <div class="account-name">${_esc(acc.label)}${badge}</div>
@@ -683,6 +727,7 @@ class RaibaPanel extends HTMLElement {
       .account-item.active { background: color-mix(in srgb, var(--primary) 12%, transparent); border-right: 3px solid var(--primary); }
       .account-item ha-icon { --mdi-icon-size: 22px; color: var(--secondary-text-color); }
       .account-item.active ha-icon { color: var(--primary); }
+      .account-item.has-unread ha-icon { color: var(--primary); }
       .account-info { flex: 1; min-width: 0; }
       .account-name { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
       .account-saldo { font-size: 12px; color: var(--secondary-text-color); margin-top: 2px; }
