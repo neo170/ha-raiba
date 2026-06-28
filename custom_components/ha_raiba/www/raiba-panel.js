@@ -735,6 +735,7 @@ class RaibaPanel extends HTMLElement {
       .search-wrap { position: relative; display: flex; align-items: center; }
       .search-wrap .search-icon { position: absolute; left: 10px; --mdi-icon-size: 18px; color: var(--secondary-text-color, #757575); pointer-events: none; }
       .search-wrap input { width: 100%; padding: 8px 36px 8px 36px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 20px; font-size: 14px; outline: none; background: var(--primary-background-color, #fafafa); color: var(--primary-text-color); }
+      .search-wrap input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
       .search-wrap input:focus { border-color: var(--primary); }
       .search-clear { position: absolute; right: 6px; background: none; border: none; cursor: pointer; padding: 4px; display: none; color: var(--secondary-text-color); }
       .search-wrap.has-value .search-clear { display: block; }
