@@ -88,8 +88,14 @@ class RaibaPanel extends HTMLElement {
                 </button>
               </div>
               <div class="date-filter-row">
-                <input id="date-from" type="date" title="Datum von">
-                <input id="date-to" type="date" title="Datum bis">
+                <div class="date-wrap" id="date-from-wrap">
+                  <input id="date-from" type="date" title="Datum von">
+                  <button class="date-clear" id="date-from-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
+                </div>
+                <div class="date-wrap" id="date-to-wrap">
+                  <input id="date-to" type="date" title="Datum bis">
+                  <button class="date-clear" id="date-to-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
+                </div>
               </div>
             </div>
             <div class="account-list" id="account-list"></div>
@@ -137,13 +143,41 @@ class RaibaPanel extends HTMLElement {
     });
 
     // Date range filters
-    root.getElementById("date-from").addEventListener("change", (e) => {
+    const dateFromEl = root.getElementById("date-from");
+    const dateToEl = root.getElementById("date-to");
+    const dateFromWrap = root.getElementById("date-from-wrap");
+    const dateToWrap = root.getElementById("date-to-wrap");
+
+    dateFromEl.addEventListener("click", () => dateFromEl.showPicker());
+    dateToEl.addEventListener("click", () => dateToEl.showPicker());
+    dateFromEl.addEventListener("keydown", (e) => e.preventDefault());
+    dateToEl.addEventListener("keydown", (e) => e.preventDefault());
+
+    dateFromEl.addEventListener("change", (e) => {
       this._dateFrom = e.target.value;
+      dateFromWrap.classList.toggle("has-value", !!this._dateFrom);
       this._renderTxList();
       this._renderTxHeader();
     });
-    root.getElementById("date-to").addEventListener("change", (e) => {
+    dateToEl.addEventListener("change", (e) => {
       this._dateTo = e.target.value;
+      dateToWrap.classList.toggle("has-value", !!this._dateTo);
+      this._renderTxList();
+      this._renderTxHeader();
+    });
+    root.getElementById("date-from-clear").addEventListener("click", (e) => {
+      e.stopPropagation();
+      dateFromEl.value = "";
+      this._dateFrom = "";
+      dateFromWrap.classList.remove("has-value");
+      this._renderTxList();
+      this._renderTxHeader();
+    });
+    root.getElementById("date-to-clear").addEventListener("click", (e) => {
+      e.stopPropagation();
+      dateToEl.value = "";
+      this._dateTo = "";
+      dateToWrap.classList.remove("has-value");
       this._renderTxList();
       this._renderTxHeader();
     });
@@ -779,8 +813,13 @@ class RaibaPanel extends HTMLElement {
       .search-wrap.has-value .search-clear { display: flex; }
 
       .date-filter-row { display: flex; gap: 8px; margin-top: 8px; }
-      .date-filter-row input { flex: 1; padding: 5px 8px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 8px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 12px; outline: none; box-sizing: border-box; }
-      .date-filter-row input:focus { border-color: var(--primary-color, #03a9f4); }
+      .date-wrap { position: relative; flex: 1; }
+      .date-wrap input { width: 100%; padding: 5px 26px 5px 8px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 8px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 12px; outline: none; box-sizing: border-box; cursor: pointer; }
+      .date-wrap input:focus { border-color: var(--primary-color, #03a9f4); }
+      .date-wrap input::-webkit-calendar-picker-indicator { display: none; }
+      .date-clear { display: none; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; padding: 0; color: var(--secondary-text-color, #757575); align-items: center; justify-content: center; width: 18px; height: 18px; }
+      .date-clear ha-icon { transform: scale(0.5); }
+      .date-wrap.has-value .date-clear { display: flex; }
 
       .account-list { flex: 1; overflow-y: auto; padding: 8px 0; }
       .account-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; }
