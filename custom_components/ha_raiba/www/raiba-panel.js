@@ -25,6 +25,7 @@ class RaibaPanel extends HTMLElement {
     this._search = "";
     this._dateFrom = "";
     this._dateTo = "";
+    this._groupMode = "standard";
     this._loading = false;
     this._syncing = false;
     this._syncSessionId = null;
@@ -99,6 +100,12 @@ class RaibaPanel extends HTMLElement {
                   <button class="date-clear" id="date-to-clear" title="Zurücksetzen"><ha-icon icon="mdi:close"></ha-icon></button>
                 </div>
               </div>
+              <select id="group-mode" class="group-select">
+                <option value="standard">Standard</option>
+                <option value="weekly">Wöchentlich</option>
+                <option value="monthly">Monatlich</option>
+                <option value="yearly">Jährlich</option>
+              </select>
             </div>
             <div class="account-list" id="account-list"></div>
           </aside>
@@ -188,6 +195,12 @@ class RaibaPanel extends HTMLElement {
       dateToWrap.classList.remove("has-value");
       this._renderTxList();
       this._renderTxHeader();
+    });
+
+    // Grouping select
+    root.getElementById("group-mode").addEventListener("change", (e) => {
+      this._groupMode = e.target.value;
+      this._renderTxList();
     });
 
     // Header buttons
@@ -565,39 +578,98 @@ class RaibaPanel extends HTMLElement {
       return;
     }
 
-    // Group by Heute / Gestern / Ältere Buchungen (like iOS app)
-    const today = this._isoDate(new Date());
-    const yesterday = this._isoDate(new Date(Date.now() - 86400000));
-
-    const groupHeute = [];
-    const groupGestern = [];
-    const groupAelter = [];
-
-    for (const tx of items) {
-      const d = tx.Date || "";
-      if (d >= today) groupHeute.push(tx);
-      else if (d === yesterday) groupGestern.push(tx);
-      else groupAelter.push(tx);
-    }
-
     let html = "";
-    if (groupHeute.length > 0) {
-      html += `<div class="tx-date-group"><div class="tx-date-header">Heute</div>`;
-      for (const tx of groupHeute) html += this._txItemHtml(tx);
-      html += `</div>`;
-    }
-    if (groupGestern.length > 0) {
-      html += `<div class="tx-date-group"><div class="tx-date-header">Gestern</div>`;
-      for (const tx of groupGestern) html += this._txItemHtml(tx);
-      html += `</div>`;
-    }
-    if (groupAelter.length > 0) {
-      html += `<div class="tx-date-group"><div class="tx-date-header">Ältere Buchungen</div>`;
-      for (const tx of groupAelter) html += this._txItemHtml(tx);
+    const groups = this._buildGroups(items);
+    for (const g of groups) {
+      const saldo = this._calcGroupSaldo(g.items);
+      const saldoStr = saldo.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const saldoClass = saldo >= 0 ? "amount-positive" : "amount-negative";
+      const showSaldo = this._groupMode !== "standard";
+      html += `<div class="tx-date-group"><div class="tx-date-header">${g.label}${showSaldo ? `<span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div>`;
+      for (const tx of g.items) html += this._txItemHtml(tx);
       html += `</div>`;
     }
 
     list.innerHTML = html;
+  }
+
+  _buildGroups(items) {
+    if (this._groupMode === "weekly") return this._groupWeekly(items);
+    if (this._groupMode === "monthly") return this._groupMonthly(items);
+    if (this._groupMode === "yearly") return this._groupYearly(items);
+    return this._groupStandard(items);
+  }
+
+  _groupStandard(items) {
+    const today = this._isoDate(new Date());
+    const yesterday = this._isoDate(new Date(Date.now() - 86400000));
+    const groups = [];
+    const groupHeute = items.filter(tx => (tx.Date || "") >= today);
+    const groupGestern = items.filter(tx => (tx.Date || "") === yesterday);
+    const groupAelter = items.filter(tx => (tx.Date || "") < yesterday);
+    if (groupHeute.length) groups.push({ label: "Heute", items: groupHeute });
+    if (groupGestern.length) groups.push({ label: "Gestern", items: groupGestern });
+    if (groupAelter.length) groups.push({ label: "Ältere Buchungen", items: groupAelter });
+    return groups;
+  }
+
+  _groupWeekly(items) {
+    const map = new Map();
+    for (const tx of items) {
+      const d = new Date(tx.Date || "2000-01-01");
+      const mon = this._getMonday(d);
+      const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+      const key = this._isoDate(mon);
+      if (!map.has(key)) map.set(key, { mon, sun, items: [] });
+      map.get(key).items.push(tx);
+    }
+    return Array.from(map.values()).map(g => ({
+      label: `${g.mon.getDate()}.${g.mon.getMonth()+1}. - ${g.sun.getDate()}.${g.sun.getMonth()+1}.${g.sun.getFullYear()}`,
+      items: g.items
+    }));
+  }
+
+  _groupMonthly(items) {
+    const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+    const map = new Map();
+    for (const tx of items) {
+      const d = new Date(tx.Date || "2000-01-01");
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
+      if (!map.has(key)) map.set(key, { month: d.getMonth(), year: d.getFullYear(), items: [] });
+      map.get(key).items.push(tx);
+    }
+    return Array.from(map.values()).map(g => ({
+      label: `${MONTHS[g.month]} ${g.year}`,
+      items: g.items
+    }));
+  }
+
+  _groupYearly(items) {
+    const map = new Map();
+    for (const tx of items) {
+      const d = new Date(tx.Date || "2000-01-01");
+      const key = String(d.getFullYear());
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(tx);
+    }
+    return Array.from(map.entries()).map(([label, txs]) => ({ label, items: txs }));
+  }
+
+  _getMonday(d) {
+    const dt = new Date(d);
+    const day = dt.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    dt.setDate(dt.getDate() + diff);
+    return dt;
+  }
+
+  _calcGroupSaldo(items) {
+    let sum = 0;
+    for (const tx of items) {
+      const val = parseFloat(tx.Amount) || 0;
+      sum += tx.CreditDebit === "S" ? -val : val;
+    }
+    return sum;
   }
 
   _isoDate(date) {
@@ -835,6 +907,9 @@ class RaibaPanel extends HTMLElement {
       .date-clear ha-icon { transform: scale(0.5); }
       .date-wrap.has-value .date-clear { display: flex; }
 
+      .group-select { width: 100%; margin-top: 8px; padding: 6px 10px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 20px; background: var(--primary-background-color, #f5f5f5); color: var(--primary-text-color, #212121); font-size: 13px; outline: none; box-sizing: border-box; cursor: pointer; -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23757575'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 26px; }
+      .group-select:focus { border-color: var(--primary-color, #03a9f4); }
+
       .account-list { flex: 1; overflow-y: auto; padding: 8px 0; }
       .account-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; }
       .account-item:hover { background: var(--secondary-background-color, #f5f5f5); }
@@ -858,7 +933,8 @@ class RaibaPanel extends HTMLElement {
       .tx-list { flex: 1; overflow-y: auto; padding: 0 8px 16px; }
 
       .tx-date-group { margin-bottom: 8px; }
-      .tx-date-header { font-size: 12px; font-weight: 600; color: var(--secondary-text-color); padding: 8px 12px 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .tx-date-header { font-size: 12px; font-weight: 600; color: var(--secondary-text-color); padding: 8px 12px 4px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+      .group-saldo { font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; }
 
       .tx-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
       .tx-item:hover { background: var(--secondary-background-color, #f5f5f5); }
