@@ -934,7 +934,7 @@ class RaibaPanel extends HTMLElement {
 
       .tx-date-group { margin-bottom: 8px; }
       .tx-date-header { font-size: 12px; font-weight: 600; color: var(--secondary-text-color); padding: 8px 12px 4px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
-      .group-saldo { font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+      .group-saldo { font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; margin-right: 12px; }
 
       .tx-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
       .tx-item:hover { background: var(--secondary-background-color, #f5f5f5); }
