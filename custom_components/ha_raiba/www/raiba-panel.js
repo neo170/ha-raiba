@@ -23,7 +23,8 @@ class RaibaPanel extends HTMLElement {
     this._selectedTab = 0;
     this._selectedTx = null;
     this._search = "";
-    this._dateFrom = this._isoDate(new Date(Date.now() - 28 * 86400000));
+    const _now = new Date(); const _firstLastMonth = new Date(_now.getFullYear(), _now.getMonth() - 1, 1);
+    this._dateFrom = this._isoDate(_firstLastMonth);
     this._dateTo = "";
     this._groupMode = "standard";
     this._groupsCollapsed = false;
