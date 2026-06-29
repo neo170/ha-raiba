@@ -755,7 +755,7 @@ class RaibaPanel extends HTMLElement {
     if (!tx.ReadAt) {
       tx.ReadAt = "now";
       this._adjustUnreadCount(tx.OwnAccount, -1);
-      this._renderAccountList();
+      this._updateBadges();
       this._markRead(tx.Id);
     }
 
@@ -814,11 +814,13 @@ class RaibaPanel extends HTMLElement {
       tx.ReadAt = null;
       this._adjustUnreadCount(tx.OwnAccount, 1);
       this._renderDetailView(tx);
+      this._updateBadges();
       this._markIds([tx.Id], false);
     } else {
       tx.ReadAt = "now";
       this._adjustUnreadCount(tx.OwnAccount, -1);
       this._renderDetailView(tx);
+      this._updateBadges();
       this._markRead(tx.Id);
     }
   }
