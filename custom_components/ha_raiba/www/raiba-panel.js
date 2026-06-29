@@ -26,6 +26,7 @@ class RaibaPanel extends HTMLElement {
     this._dateFrom = this._isoDate(new Date(Date.now() - 28 * 86400000));
     this._dateTo = "";
     this._groupMode = "standard";
+    this._groupsCollapsed = false;
     this._loading = false;
     this._syncing = false;
     this._syncSessionId = null;
@@ -558,23 +559,8 @@ class RaibaPanel extends HTMLElement {
     const header = this.shadowRoot.getElementById("tx-header");
     if (!header) return;
     const acc = ACCOUNTS[this._selectedTab];
-    let saldoStr = "";
-    if (this._hasActiveFilters()) {
-      // During search: sum of filtered entries
-      const filtered = this._getFilteredTransactions();
-      let sum = 0;
-      for (const tx of filtered) {
-        const val = parseFloat(tx.Amount) || 0;
-        sum += tx.CreditDebit === "S" ? -val : val;
-      }
-      saldoStr = this._formatAmount(sum.toFixed(2)) + " \u20ac";
-    } else {
-      const saldo = acc.konto ? this._saldos[acc.konto] : this._saldos["Gesamt"];
-      saldoStr = saldo ? this._formatAmount(saldo) + " \u20ac" : "";
-    }
     header.innerHTML = `
       <div class="tx-header-title">${_esc(acc.label)}</div>
-      ${saldoStr ? `<div class="tx-header-saldo">${saldoStr}</div>` : ""}
     `;
   }
 
@@ -623,17 +609,31 @@ class RaibaPanel extends HTMLElement {
 
     let html = "";
     const groups = this._buildGroups(items);
+    const collapsed = this._groupsCollapsed;
     for (const g of groups) {
       const saldo = this._calcGroupSaldo(g.items);
       const saldoStr = saldo.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const saldoClass = saldo >= 0 ? "amount-positive" : "amount-negative";
       const showSaldo = this._groupMode !== "standard";
-      html += `<div class="tx-date-group"><div class="tx-date-header">${g.label}${showSaldo ? `: <span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div>`;
+      const collClass = collapsed ? " collapsed" : "";
+      html += `<div class="tx-date-group${collClass}"><div class="tx-date-header"><span class="group-toggle">&#x25BE;</span>${g.label}${showSaldo ? `: <span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div>`;
+      html += `<div class="group-items">`;
       for (const tx of g.items) html += this._txItemHtml(tx);
-      html += `</div>`;
+      html += `</div></div>`;
     }
 
     list.innerHTML = html;
+
+    // Toggle all groups on chevron click
+    list.querySelectorAll(".group-toggle").forEach(toggle => {
+      toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._groupsCollapsed = !this._groupsCollapsed;
+        list.querySelectorAll(".tx-date-group").forEach(g => {
+          g.classList.toggle("collapsed", this._groupsCollapsed);
+        });
+      });
+    });
   }
 
   _buildGroups(items) {
@@ -1050,6 +1050,10 @@ class RaibaPanel extends HTMLElement {
 
       .tx-date-group { margin-bottom: 8px; }
       .tx-date-header { font-size: 12px; font-weight: 600; color: var(--secondary-text-color); padding: 8px 12px 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .group-toggle { display: inline-block; margin-right: 6px; transition: transform 0.2s; cursor: pointer; }
+      .tx-date-group.collapsed .group-toggle { transform: rotate(-90deg); }
+      .group-items { }
+      .tx-date-group.collapsed .group-items { display: none; }
       .group-saldo { font-weight: 600; text-transform: none; letter-spacing: 0; }
 
       .tx-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
