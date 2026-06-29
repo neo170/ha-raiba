@@ -806,54 +806,53 @@ class RaibaPanel extends HTMLElement {
   }
 
   async _toggleReadDetail(tx) {
-    if (tx.ReadAt) {
-      tx.ReadAt = null;
-      this._adjustUnreadCount(tx.OwnAccount, 1);
-      this._renderDetailView(tx);
-      this._updateBadges();
-      this._markIds([tx.Id], false);
-    } else {
-      tx.ReadAt = "now";
-      this._adjustUnreadCount(tx.OwnAccount, -1);
-      this._renderDetailView(tx);
-      this._updateBadges();
-      this._markRead(tx.Id);
-    }
+    this._setTxRead(tx, !tx.ReadAt);
+    this._renderDetailView(tx);
   }
 
   async _toggleReadInline(tx) {
-    if (tx.ReadAt) {
-      tx.ReadAt = null;
-      this._adjustUnreadCount(tx.OwnAccount, 1);
-    } else {
-      tx.ReadAt = "now";
-      this._adjustUnreadCount(tx.OwnAccount, -1);
-    }
+    this._setTxRead(tx, !tx.ReadAt);
+  }
 
-    // Update only the affected row in the DOM instead of re-rendering the entire list
-    const row = this.shadowRoot.querySelector(`.tx-item[data-id="${tx.Id}"]`);
-    if (row) {
-      row.classList.toggle("unread", !tx.ReadAt);
-      const toggleBtn = row.querySelector(".tx-read-toggle ha-icon");
-      if (toggleBtn) toggleBtn.setAttribute("icon", tx.ReadAt ? "mdi:check-circle" : "mdi:check-circle-outline");
-    }
+  _setTxRead(tx, read) {
+    const wasUnread = !tx.ReadAt;
+    tx.ReadAt = read ? "now" : null;
+    const isUnread = !tx.ReadAt;
+
+    // Only act if state actually changed
+    if (wasUnread === isUnread) return;
+
+    this._adjustUnreadCount(tx.OwnAccount, isUnread ? 1 : -1);
+    this._patchTxRow(tx);
     this._updateBadges();
 
     // Fire-and-forget API call
-    if (tx.ReadAt) {
+    if (read) {
       this._markRead(tx.Id);
     } else {
       this._markIds([tx.Id], false);
     }
   }
 
+  _patchTxRow(tx) {
+    const row = this.shadowRoot.querySelector(`.tx-item[data-id="${tx.Id}"]`);
+    if (!row) return;
+    row.classList.toggle("unread", !tx.ReadAt);
+    const icon = row.querySelector(".tx-read-toggle ha-icon");
+    if (icon) icon.setAttribute("icon", tx.ReadAt ? "mdi:check-circle" : "mdi:check-circle-outline");
+    const nameEl = row.querySelector(".tx-name");
+    if (nameEl) nameEl.style.fontWeight = tx.ReadAt ? "" : "700";
+  }
+
   _hideDetail() {
+    const tx = this._selectedTx;
     this._selectedTx = null;
     const detail = this.shadowRoot.getElementById("tx-detail");
     const listContainer = this.shadowRoot.getElementById("tx-list-container");
     detail.style.display = "none";
     listContainer.style.display = "";
-    // Don't remove detail-open here — stay on tx list (mobile)
+    // Sync the row in the list with current read state
+    if (tx) this._patchTxRow(tx);
   }
 
   _openDetail() {
