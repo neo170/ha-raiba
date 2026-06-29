@@ -139,11 +139,15 @@ class RaibaPanel extends HTMLElement {
     // Search
     const searchEl = root.getElementById("search");
     const searchWrap = root.getElementById("search-wrap");
+    let _searchTimer = null;
     searchEl.addEventListener("input", (e) => {
       this._search = e.target.value;
-      this._renderTxList();
-      this._renderTxHeader();
       searchWrap.classList.toggle("has-value", !!e.target.value);
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(() => {
+        this._renderTxList();
+        this._renderTxHeader();
+      }, 150);
     });
     root.getElementById("btn-search-clear").addEventListener("click", () => {
       searchEl.value = "";
