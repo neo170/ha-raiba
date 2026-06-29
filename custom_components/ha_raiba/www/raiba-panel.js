@@ -5,10 +5,10 @@
 
 const ACCOUNTS = [
   { tab: 0, label: "Alle Umsätze", konto: null, icon: "mdi:format-list-bulleted" },
-  { tab: 1, label: "Rileg", konto: "1026704", icon: "mdi:bank" },
-  { tab: 2, label: "Dkb", konto: "1009491828", icon: "mdi:bank-outline" },
-  { tab: 3, label: "Strasslach", konto: "1055437", icon: "mdi:home-city" },
-  { tab: 4, label: "DKB TG", konto: "1021344369", icon: "mdi:piggy-bank" },
+  { tab: 1, label: "Dkb", konto: "1009491828", icon: "mdi:bank-outline" },
+  { tab: 2, label: "Strasslach", konto: "1055437", icon: "mdi:home-city" },
+  { tab: 3, label: "DKB TG", konto: "1021344369", icon: "mdi:piggy-bank" },
+  { tab: 4, label: "Rileg", konto: "1026704", icon: "mdi:bank" },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────

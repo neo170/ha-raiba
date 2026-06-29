@@ -1,0 +1,2 @@
+Erzeuge keine Code-Dulicate. Fasse gleiche Funktionen die z.b. von verschiedenen Buttons ausgelöst werden, in Zentralmethoden zusammen.
+Nutze immer ein Einheitliches Layout und Design für alle Komponenten. Achte auf konsistente Abstände, Farben und Schriftarten.  

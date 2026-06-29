@@ -1,7 +1,7 @@
 {
   "domain": "ha_raiba",
   "name": "HA Raiba",
-  "version": "0.0.36",
+  "version": "0.0.37",
   "documentation": "https://github.com/neo170/ha-raiba",
   "issue_tracker": "https://github.com/neo170/ha-raiba/issues",
   "requirements": [],
