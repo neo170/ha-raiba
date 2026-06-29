@@ -1050,7 +1050,7 @@ class RaibaPanel extends HTMLElement {
 
       .tx-date-group { margin-bottom: 8px; }
       .tx-date-header { font-size: 12px; font-weight: 600; color: var(--secondary-text-color); padding: 8px 12px 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-      .group-toggle { display: inline-block; margin-right: 6px; transition: transform 0.2s; cursor: pointer; }
+      .group-toggle { display: inline-block; margin-right: 6px; transition: transform 0.2s; cursor: pointer; font-size: 24px; line-height: 12px; vertical-align: middle; }
       .tx-date-group.collapsed .group-toggle { transform: rotate(-90deg); }
       .group-items { }
       .tx-date-group.collapsed .group-items { display: none; }
