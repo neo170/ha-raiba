@@ -23,7 +23,7 @@ class RaibaPanel extends HTMLElement {
     this._selectedTab = 0;
     this._selectedTx = null;
     this._search = "";
-    this._dateFrom = "";
+    this._dateFrom = this._isoDate(new Date(Date.now() - 28 * 86400000));
     this._dateTo = "";
     this._groupMode = "standard";
     this._loading = false;
@@ -168,6 +168,11 @@ class RaibaPanel extends HTMLElement {
 
     dateFromEl.addEventListener("click", () => dateFromPicker.showPicker());
     dateToEl.addEventListener("click", () => dateToPicker.showPicker());
+
+    // Set default date-from (today minus 4 weeks)
+    dateFromEl.value = this._formatDateDE(this._dateFrom);
+    dateFromPicker.value = this._dateFrom;
+    dateFromWrap.classList.add("has-value");
 
     dateFromPicker.addEventListener("change", (e) => {
       const v = e.target.value;
