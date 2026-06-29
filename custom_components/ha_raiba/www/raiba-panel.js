@@ -375,6 +375,29 @@ class RaibaPanel extends HTMLElement {
     this._unreadCounts["Gesamt"] = Math.max(0, (this._unreadCounts["Gesamt"] || 0) + delta);
   }
 
+  _updateBadges() {
+    const items = this.shadowRoot.querySelectorAll(".account-item");
+    for (const el of items) {
+      const tab = parseInt(el.dataset.tab, 10);
+      const acc = ACCOUNTS[tab];
+      if (!acc) continue;
+      const unread = acc.konto ? (this._unreadCounts[acc.konto] || 0) : (this._unreadCounts["Gesamt"] || 0);
+      let badge = el.querySelector(".badge");
+      if (unread > 0) {
+        el.classList.add("has-unread");
+        if (badge) { badge.textContent = unread; } else {
+          const span = document.createElement("span");
+          span.className = "badge";
+          span.textContent = unread;
+          el.querySelector(".account-name")?.appendChild(span);
+        }
+      } else {
+        el.classList.remove("has-unread");
+        if (badge) badge.remove();
+      }
+    }
+  }
+
   _recalcUnreadCounts() {
     const counts = { "Gesamt": 0 };
     for (const tx of this._transactions) {
@@ -804,15 +827,25 @@ class RaibaPanel extends HTMLElement {
     if (tx.ReadAt) {
       tx.ReadAt = null;
       this._adjustUnreadCount(tx.OwnAccount, 1);
-      this._renderTxList();
-      this._renderAccountList();
-      this._markIds([tx.Id], false);
     } else {
       tx.ReadAt = "now";
       this._adjustUnreadCount(tx.OwnAccount, -1);
-      this._renderTxList();
-      this._renderAccountList();
+    }
+
+    // Update only the affected row in the DOM instead of re-rendering the entire list
+    const row = this.shadowRoot.querySelector(`.tx-item[data-id="${tx.Id}"]`);
+    if (row) {
+      row.classList.toggle("unread", !tx.ReadAt);
+      const toggleBtn = row.querySelector(".tx-read-toggle ha-icon");
+      if (toggleBtn) toggleBtn.setAttribute("icon", tx.ReadAt ? "mdi:check-circle" : "mdi:check-circle-outline");
+    }
+    this._updateBadges();
+
+    // Fire-and-forget API call
+    if (tx.ReadAt) {
       this._markRead(tx.Id);
+    } else {
+      this._markIds([tx.Id], false);
     }
   }
 
