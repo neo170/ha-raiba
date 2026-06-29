@@ -274,13 +274,6 @@ class RaibaPanel extends HTMLElement {
   async _markRead(id) {
     try {
       await this._callApi("GET", `raiba/mark_read?id=${id}`);
-      const tx = this._transactions.find(t => t.Id === id);
-      if (tx && !tx.ReadAt) {
-        tx.ReadAt = "now";
-        this._adjustUnreadCount(tx.OwnAccount, -1);
-      }
-      this._renderTxList();
-      this._renderAccountList();
     } catch (err) {
       this._showToast("Fehler: " + err.message, "error");
     }
@@ -289,17 +282,6 @@ class RaibaPanel extends HTMLElement {
   async _markIds(ids, read) {
     try {
       await this._callApi("GET", `raiba/mark_ids?ids=${ids.join(",")}&read=${read ? 1 : 0}`);
-      for (const id of ids) {
-        const tx = this._transactions.find(t => t.Id === id);
-        if (tx) {
-          const wasUnread = !tx.ReadAt;
-          tx.ReadAt = read ? "now" : null;
-          if (read && wasUnread) this._adjustUnreadCount(tx.OwnAccount, -1);
-          if (!read && !wasUnread) this._adjustUnreadCount(tx.OwnAccount, 1);
-        }
-      }
-      this._renderTxList();
-      this._renderAccountList();
     } catch (err) {
       this._showToast("Fehler: " + err.message, "error");
     }
@@ -313,8 +295,16 @@ class RaibaPanel extends HTMLElement {
     if (hasUnread) {
       // Mark all read
       if (this._search) {
-        const ids = visible.filter(t => !t.ReadAt).map(t => t.Id);
-        await this._markIds(ids, true);
+        const unread = visible.filter(t => !t.ReadAt);
+        const ids = unread.map(t => t.Id);
+        for (const tx of unread) {
+          tx.ReadAt = "now";
+          this._adjustUnreadCount(tx.OwnAccount, -1);
+        }
+        this._renderTxList();
+        this._renderAccountList();
+        this._showToast("Alle als gelesen markiert", "success");
+        this._markIds(ids, true);
       } else {
         const konto = account.konto || "";
         try {
@@ -344,7 +334,16 @@ class RaibaPanel extends HTMLElement {
       if (!confirm("Alle angezeigten Einträge als ungelesen markieren?")) return;
       if (this._search) {
         const ids = visible.map(t => t.Id);
-        await this._markIds(ids, false);
+        for (const tx of visible) {
+          if (tx.ReadAt) {
+            tx.ReadAt = null;
+            this._adjustUnreadCount(tx.OwnAccount, 1);
+          }
+        }
+        this._renderTxList();
+        this._renderAccountList();
+        this._showToast("Alle als ungelesen markiert", "success");
+        this._markIds(ids, false);
       } else {
         const konto = account.konto || "";
         try {
@@ -731,6 +730,9 @@ class RaibaPanel extends HTMLElement {
 
     // Mark as read on first open
     if (!tx.ReadAt) {
+      tx.ReadAt = "now";
+      this._adjustUnreadCount(tx.OwnAccount, -1);
+      this._renderAccountList();
       this._markRead(tx.Id);
     }
 
@@ -787,10 +789,12 @@ class RaibaPanel extends HTMLElement {
   async _toggleReadDetail(tx) {
     if (tx.ReadAt) {
       tx.ReadAt = null;
+      this._adjustUnreadCount(tx.OwnAccount, 1);
       this._renderDetailView(tx);
       this._markIds([tx.Id], false);
     } else {
       tx.ReadAt = "now";
+      this._adjustUnreadCount(tx.OwnAccount, -1);
       this._renderDetailView(tx);
       this._markRead(tx.Id);
     }
@@ -799,11 +803,13 @@ class RaibaPanel extends HTMLElement {
   async _toggleReadInline(tx) {
     if (tx.ReadAt) {
       tx.ReadAt = null;
+      this._adjustUnreadCount(tx.OwnAccount, 1);
       this._renderTxList();
       this._renderAccountList();
       this._markIds([tx.Id], false);
     } else {
       tx.ReadAt = "now";
+      this._adjustUnreadCount(tx.OwnAccount, -1);
       this._renderTxList();
       this._renderAccountList();
       this._markRead(tx.Id);
