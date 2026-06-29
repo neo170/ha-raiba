@@ -233,6 +233,14 @@ class RaibaPanel extends HTMLElement {
 
     // Transaction list clicks
     root.getElementById("tx-list").addEventListener("click", (e) => {
+      const readBtn = e.target.closest(".tx-read-toggle");
+      if (readBtn) {
+        e.stopPropagation();
+        const id = readBtn.dataset.id;
+        const tx = this._transactions.find(t => t.Id === id);
+        if (tx) this._toggleReadInline(tx);
+        return;
+      }
       const item = e.target.closest(".tx-item");
       if (item) {
         const id = item.dataset.id;
@@ -706,6 +714,9 @@ class RaibaPanel extends HTMLElement {
       <div class="tx-item${unreadClass}" data-id="${_esc(tx.Id)}">
         <div class="tx-icon">
           <ha-icon icon="${accountIcon}"></ha-icon>
+          <button class="tx-read-toggle" data-id="${_esc(tx.Id)}" title="Gelesen/Ungelesen">
+            <ha-icon icon="${isUnread ? 'mdi:check-circle-outline' : 'mdi:check-circle'}"></ha-icon>
+          </button>
         </div>
         <div class="tx-info">
           <div class="tx-name">${_esc(tx.Name || "(Unbekannt)")}</div>
@@ -775,15 +786,25 @@ class RaibaPanel extends HTMLElement {
 
   async _toggleReadDetail(tx) {
     if (tx.ReadAt) {
-      if (!confirm("Diesen Eintrag wieder als ungelesen markieren?")) return;
       await this._markIds([tx.Id], false);
       tx.ReadAt = null;
     } else {
       await this._markRead(tx.Id);
       tx.ReadAt = "now";
     }
-    // Re-render detail without triggering auto-markRead
     this._renderDetailView(tx);
+  }
+
+  async _toggleReadInline(tx) {
+    if (tx.ReadAt) {
+      await this._markIds([tx.Id], false);
+      tx.ReadAt = null;
+    } else {
+      await this._markRead(tx.Id);
+      tx.ReadAt = "now";
+    }
+    this._renderTxList();
+    this._renderAccountList();
   }
 
   _hideDetail() {
@@ -986,8 +1007,12 @@ class RaibaPanel extends HTMLElement {
       .tx-item:hover { background: var(--secondary-background-color, #f5f5f5); }
       .tx-item.unread .tx-name { font-weight: 700; }
       .tx-item.unread .tx-icon ha-icon { color: var(--primary-color, #03a9f4); }
-      .tx-icon { flex-shrink: 0; }
+      .tx-icon { flex-shrink: 0; position: relative; width: 22px; height: 22px; }
       .tx-icon ha-icon { --mdi-icon-size: 22px; color: var(--secondary-text-color); }
+      .tx-read-toggle { display: none; position: absolute; inset: 0; border: none; background: transparent; cursor: pointer; padding: 0; color: var(--primary-color, #03a9f4); align-items: center; justify-content: center; }
+      .tx-read-toggle ha-icon { --mdi-icon-size: 22px; }
+      .tx-item:hover .tx-read-toggle { display: flex; }
+      .tx-item:hover > .tx-icon > ha-icon:first-child { visibility: hidden; }
       .tx-info { flex: 1; min-width: 0; }
       .tx-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .tx-sub { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
