@@ -786,25 +786,28 @@ class RaibaPanel extends HTMLElement {
 
   async _toggleReadDetail(tx) {
     if (tx.ReadAt) {
-      await this._markIds([tx.Id], false);
       tx.ReadAt = null;
+      this._renderDetailView(tx);
+      this._markIds([tx.Id], false);
     } else {
-      await this._markRead(tx.Id);
       tx.ReadAt = "now";
+      this._renderDetailView(tx);
+      this._markRead(tx.Id);
     }
-    this._renderDetailView(tx);
   }
 
   async _toggleReadInline(tx) {
     if (tx.ReadAt) {
-      await this._markIds([tx.Id], false);
       tx.ReadAt = null;
+      this._renderTxList();
+      this._renderAccountList();
+      this._markIds([tx.Id], false);
     } else {
-      await this._markRead(tx.Id);
       tx.ReadAt = "now";
+      this._renderTxList();
+      this._renderAccountList();
+      this._markRead(tx.Id);
     }
-    this._renderTxList();
-    this._renderAccountList();
   }
 
   _hideDetail() {
