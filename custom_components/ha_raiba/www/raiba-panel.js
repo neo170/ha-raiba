@@ -755,15 +755,6 @@ class RaibaPanel extends HTMLElement {
 
   _showDetail(tx) {
     this._selectedTx = tx;
-
-    // Mark as read on first open
-    if (!tx.ReadAt) {
-      tx.ReadAt = "now";
-      this._adjustUnreadCount(tx.OwnAccount, -1);
-      this._updateBadges();
-      this._markRead(tx.Id);
-    }
-
     this._renderDetailView(tx);
   }
 
