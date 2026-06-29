@@ -5,10 +5,10 @@
 
 const ACCOUNTS = [
   { tab: 0, label: "Alle Umsätze", konto: null, icon: "mdi:format-list-bulleted" },
-  { tab: 1, label: "Dkb", konto: "1009491828", icon: "mdi:bank-outline" },
-  { tab: 2, label: "Strasslach", konto: "1055437", icon: "mdi:home-city" },
-  { tab: 3, label: "DKB TG", konto: "1021344369", icon: "mdi:piggy-bank" },
-  { tab: 4, label: "Rileg", konto: "1026704", icon: "mdi:bank" },
+  { tab: 2, label: "Dkb", konto: "1009491828", icon: "mdi:bank-outline" },
+  { tab: 3, label: "Strasslach", konto: "1055437", icon: "mdi:home-city" },
+  { tab: 4, label: "DKB TG", konto: "1021344369", icon: "mdi:piggy-bank" },
+  { tab: 1, label: "Rileg", konto: "1026704", icon: "mdi:bank" },
 ];
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -311,7 +311,7 @@ class RaibaPanel extends HTMLElement {
   async _markAllToggle() {
     const visible = this._getFilteredTransactions();
     const hasUnread = visible.some(t => !t.ReadAt);
-    const account = ACCOUNTS[this._selectedTab];
+    const account = ACCOUNTS.find(a => a.tab === this._selectedTab);
 
     if (hasUnread) {
       // Mark all read
@@ -400,7 +400,7 @@ class RaibaPanel extends HTMLElement {
     const items = this.shadowRoot.querySelectorAll(".account-item");
     for (const el of items) {
       const tab = parseInt(el.dataset.tab, 10);
-      const acc = ACCOUNTS[tab];
+      const acc = ACCOUNTS.find(a => a.tab === tab);
       if (!acc) continue;
       const unread = acc.konto ? (this._unreadCounts[acc.konto] || 0) : (this._unreadCounts["Gesamt"] || 0);
       let badge = el.querySelector(".badge");
@@ -573,7 +573,7 @@ class RaibaPanel extends HTMLElement {
   _renderTxHeader() {
     const header = this.shadowRoot.getElementById("tx-header");
     if (!header) return;
-    const acc = ACCOUNTS[this._selectedTab];
+    const acc = ACCOUNTS.find(a => a.tab === this._selectedTab);
     header.innerHTML = `
       <div class="tx-header-title">${_esc(acc.label)}</div>
     `;
