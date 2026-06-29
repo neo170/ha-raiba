@@ -53,6 +53,12 @@ class RaibaPanel extends HTMLElement {
     }
   }
 
+  disconnectedCallback() {
+    if (this._popstateHandler) {
+      window.removeEventListener("popstate", this._popstateHandler);
+    }
+  }
+
   // ── Initial DOM ───────────────────────────────────────────────────────────
 
   _buildShell() {
@@ -256,6 +262,14 @@ class RaibaPanel extends HTMLElement {
     });
 
     this._renderAccountList();
+
+    // Handle browser back button
+    this._popstateHandler = () => {
+      if (this._selectedTx) {
+        this._hideDetail();
+      }
+    };
+    window.addEventListener("popstate", this._popstateHandler);
   }
 
   // ── Data ──────────────────────────────────────────────────────────────────
@@ -755,6 +769,7 @@ class RaibaPanel extends HTMLElement {
 
   _showDetail(tx) {
     this._selectedTx = tx;
+    history.pushState({ raibaDetail: true }, "");
     this._renderDetailView(tx);
   }
 
@@ -799,7 +814,7 @@ class RaibaPanel extends HTMLElement {
       </div>
     `;
 
-    detail.querySelector("#btn-detail-back").addEventListener("click", () => this._hideDetail());
+    detail.querySelector("#btn-detail-back").addEventListener("click", () => this._hideDetailWithBack());
     detail.querySelector("#btn-read-toggle").addEventListener("click", () => this._toggleReadDetail(tx));
 
     this.shadowRoot.querySelector(".shell")?.classList.add("detail-open");
@@ -855,14 +870,20 @@ class RaibaPanel extends HTMLElement {
     if (tx) this._patchTxRow(tx);
   }
 
+  _hideDetailWithBack() {
+    if (this._selectedTx) {
+      history.back();
+    }
+  }
+
   _openDetail() {
     this.shadowRoot.querySelector(".shell")?.classList.add("detail-open");
   }
 
   _backToList() {
     if (this._selectedTx) {
-      // From tx detail back to tx list
-      this._hideDetail();
+      // From tx detail back to tx list - use history so popstate handles it
+      history.back();
     } else {
       // From tx list back to account list (mobile)
       this.shadowRoot.querySelector(".shell")?.classList.remove("detail-open");
