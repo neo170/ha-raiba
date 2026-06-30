@@ -194,13 +194,16 @@ class RaibaSyncView(HomeAssistantView):
             target += f"&session={session_id}"
 
         timeout = 60 if action == "start" else 30
+        _LOGGER.warning("RaibaSyncView calling: %s", target)
 
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
                 async with session.get(target, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
+                    _LOGGER.warning("RaibaSyncView response status: %s, url: %s", resp.status, resp.url)
                     if resp.status != 200:
                         return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
                     data = await _parse_json(resp)
+                    _LOGGER.warning("RaibaSyncView response keys: %s", list(data.keys()) if isinstance(data, dict) else type(data))
                     return self.json(data)
         except Exception as err:
             _LOGGER.error("RaibaSyncView error: %s", err)

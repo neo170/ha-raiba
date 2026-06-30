@@ -4,7 +4,6 @@
  */
 ;(function() {
 "use strict";
-if (customElements.get("raiba-panel")) return;
 
 const ACCOUNTS = [
   { tab: 0, label: "Alle Umsätze", konto: null, icon: "mdi:format-list-bulleted" },
@@ -1190,5 +1189,5 @@ function _esc(str) {
   return d.innerHTML;
 }
 
-customElements.define("raiba-panel", RaibaPanel);
+try { customElements.define("raiba-panel", RaibaPanel); } catch(e) { /* already defined */ }
 })();
