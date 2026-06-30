@@ -986,7 +986,8 @@ class RaibaPanel extends HTMLElement {
     const toast = this.shadowRoot.getElementById("toast");
     toast.textContent = msg;
     toast.className = "toast visible " + type;
-    setTimeout(() => { toast.classList.remove("visible"); }, 3000);
+    const duration = type === "error" ? 10000 : 3000;
+    setTimeout(() => { toast.classList.remove("visible"); }, duration);
   }
 
   _exportExcel() {
