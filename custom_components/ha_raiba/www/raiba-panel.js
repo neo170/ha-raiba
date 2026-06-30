@@ -440,10 +440,11 @@ class RaibaPanel extends HTMLElement {
 
   async _startSync() {
     this._syncing = true;
+    this._syncSessionId = null;
     this._showSyncOverlay("Verbinde mit Bank…", 0.1);
 
     try {
-      const data = await this._callApi("GET", "raiba/sync/start");
+      const data = await this._callApi("GET", `raiba/sync/start?pst=${Date.now()}`);
       this._handleSyncResponse(data);
     } catch (err) {
       this._hideSyncOverlay();
@@ -456,16 +457,17 @@ class RaibaPanel extends HTMLElement {
     const status = json.status || "";
 
     if (status === "waiting_tan") {
-      this._syncSessionId = json.session || "";
+      this._syncSessionId = json.session || this._syncSessionId || "";
       const bank = json.bank || "";
       const challenge = json.challenge || "";
       const banksCompleted = json.banksCompleted || 0;
       const progress = (banksCompleted + 1) / Math.max(banksCompleted + 2, 3);
       this._showSyncOverlay(`${bank}\n\n${challenge}`, progress);
-      this._startPolling();
+      this._scheduleNextPoll();
     } else if (status === "done") {
       this._stopPolling();
       this._syncing = false;
+      this._syncSessionId = null;
       const banks = json.banks || [];
       let msg = "";
       let totalNew = 0;
@@ -481,7 +483,6 @@ class RaibaPanel extends HTMLElement {
         }
       }
       msg += totalNew > 0 ? `\n${totalNew} neue Buchungen` : "\nAlles aktuell";
-      // Show completion in same overlay, then dismiss
       this._showSyncOverlay("✓ Sync abgeschlossen\n\n" + msg, 1.0);
       setTimeout(() => {
         this._hideSyncOverlay();
@@ -490,24 +491,33 @@ class RaibaPanel extends HTMLElement {
     } else if (status === "timeout") {
       this._stopPolling();
       this._syncing = false;
+      this._syncSessionId = null;
       this._hideSyncOverlay();
       this._showToast("Timeout — 2FA nicht rechtzeitig bestätigt", "error");
     } else if (status === "error") {
       this._stopPolling();
       this._syncing = false;
+      this._syncSessionId = null;
       this._hideSyncOverlay();
-      this._showToast("Sync-Fehler: " + (json.message || "Unbekannt"), "error");
+      this._showToast("Sync-Fehler: " + (json.message || json.error || "Unbekannt"), "error");
+    } else {
+      // Unbekannter Status — stoppen
+      this._stopPolling();
+      this._syncing = false;
+      this._syncSessionId = null;
+      this._hideSyncOverlay();
+      this._showToast("Unerwartete Serverantwort: " + (status || JSON.stringify(json).substring(0, 80)), "error");
     }
   }
 
-  _startPolling() {
+  _scheduleNextPoll() {
     this._stopPolling();
-    this._syncTimer = setInterval(() => this._pollSyncStatus(), 3000);
+    this._syncTimer = setTimeout(() => this._pollSyncStatus(), 3000);
   }
 
   _stopPolling() {
     if (this._syncTimer) {
-      clearInterval(this._syncTimer);
+      clearTimeout(this._syncTimer);
       this._syncTimer = null;
     }
   }
@@ -518,10 +528,11 @@ class RaibaPanel extends HTMLElement {
       return;
     }
     try {
-      const data = await this._callApi("GET", `raiba/sync/status?session=${this._syncSessionId}`);
+      const data = await this._callApi("GET", `raiba/sync/status?session=${this._syncSessionId}&pst=${Date.now()}`);
       this._handleSyncResponse(data);
     } catch (err) {
-      // Ignore polling errors
+      // Netzwerkfehler: nochmal versuchen (wie iOS-App)
+      this._scheduleNextPoll();
     }
   }
 
