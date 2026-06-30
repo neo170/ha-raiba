@@ -514,7 +514,8 @@ class RaibaPanel extends HTMLElement {
       const challenge = json.challenge || "";
       const banksCompleted = json.banksCompleted || 0;
       const progress = (banksCompleted + 1) / Math.max(banksCompleted + 2, 3);
-      this._showSyncOverlay(bank + "\n\n" + challenge, progress);
+      this._syncProgress = Math.max(this._syncProgress, progress);
+      this._showSyncOverlay(bank + "\n\n" + challenge, this._syncProgress);
       this._scheduleNextPoll();
 
     } else if (status === "done") {
