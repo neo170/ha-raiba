@@ -35,6 +35,11 @@ class RaibaPanel extends HTMLElement {
     this._syncSessionId = null;
     this._syncTimer = null;
     this._rendered = false;
+    this._PAGE_SIZE = 50;
+    this._visibleCount = 50;
+    this._totalFilteredCount = 0;
+    this._cachedGroups = [];
+    this._scrollListenerAttached = false;
   }
 
   set hass(hass) {
@@ -668,34 +673,125 @@ class RaibaPanel extends HTMLElement {
     if (!list) return;
 
     const items = this._getFilteredTransactions();
+    this._totalFilteredCount = items.length;
+    this._visibleCount = this._PAGE_SIZE;
 
     if (items.length === 0) {
       list.innerHTML = `<div class="no-results">Keine Umsätze</div>`;
+      this._cachedGroups = [];
       return;
     }
 
-    let html = "";
-    const groups = this._buildGroups(items);
+    this._cachedGroups = this._buildGroups(items);
+
     const collapsed = this._groupsCollapsed;
-    for (const g of groups) {
+    let html = "";
+    let rendered = 0;
+
+    for (let gi = 0; gi < this._cachedGroups.length; gi++) {
+      if (rendered >= this._visibleCount) break;
+      const g = this._cachedGroups[gi];
       const saldo = this._calcGroupSaldo(g.items);
       const saldoStr = saldo.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const saldoClass = saldo >= 0 ? "amount-positive" : "amount-negative";
       const showSaldo = this._groupMode !== "standard";
       const collClass = collapsed ? " collapsed" : "";
-      html += `<div class="tx-date-group${collClass}"><div class="tx-date-header"><span class="group-toggle">&#x25BE;</span>${g.label}${showSaldo ? `: <span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div>`;
+      html += `<div class="tx-date-group${collClass}" data-gidx="${gi}"><div class="tx-date-header"><span class="group-toggle">&#x25BE;</span>${g.label}${showSaldo ? `: <span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div>`;
       html += `<div class="group-items">`;
-      for (const tx of g.items) html += this._txItemHtml(tx);
+      const toRender = Math.min(g.items.length, this._visibleCount - rendered);
+      for (let i = 0; i < toRender; i++) {
+        html += this._txItemHtml(g.items[i]);
+        rendered++;
+      }
       html += `</div></div>`;
     }
 
-    list.innerHTML = html;
+    if (rendered < this._totalFilteredCount) {
+      html += `<div class="tx-count">${rendered} von ${this._totalFilteredCount} Umsätzen</div>`;
+    }
 
-    // Toggle all groups on chevron click
-    list.querySelectorAll(".group-toggle").forEach(toggle => {
+    list.innerHTML = html;
+    list.scrollTop = 0;
+
+    this._attachGroupToggles(list);
+    this._ensureScrollListener(list);
+  }
+
+  _loadMore() {
+    const list = this.shadowRoot.getElementById("tx-list");
+    if (!list || !this._cachedGroups.length) return;
+    if (this._visibleCount >= this._totalFilteredCount) return;
+
+    const oldVisible = this._visibleCount;
+    this._visibleCount = Math.min(this._visibleCount + this._PAGE_SIZE, this._totalFilteredCount);
+
+    let itemIndex = 0;
+    for (let gi = 0; gi < this._cachedGroups.length; gi++) {
+      const g = this._cachedGroups[gi];
+      const groupEnd = itemIndex + g.items.length;
+
+      if (groupEnd <= oldVisible) { itemIndex = groupEnd; continue; }
+      if (itemIndex >= this._visibleCount) break;
+
+      const alreadyRendered = Math.max(0, oldVisible - itemIndex);
+      const toRender = Math.min(g.items.length, this._visibleCount - itemIndex) - alreadyRendered;
+      if (toRender <= 0) { itemIndex = groupEnd; continue; }
+
+      let groupEl = list.querySelector(`.tx-date-group[data-gidx="${gi}"]`);
+      if (!groupEl) {
+        const collapsed = this._groupsCollapsed;
+        const saldo = this._calcGroupSaldo(g.items);
+        const saldoStr = saldo.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const saldoClass = saldo >= 0 ? "amount-positive" : "amount-negative";
+        const showSaldo = this._groupMode !== "standard";
+        groupEl = document.createElement("div");
+        groupEl.className = "tx-date-group" + (collapsed ? " collapsed" : "");
+        groupEl.dataset.gidx = gi;
+        groupEl.innerHTML = `<div class="tx-date-header"><span class="group-toggle">&#x25BE;</span>${g.label}${showSaldo ? `: <span class="group-saldo ${saldoClass}">${saldoStr} €</span>` : ""}</div><div class="group-items"></div>`;
+        const counter = list.querySelector(".tx-count");
+        if (counter) list.insertBefore(groupEl, counter); else list.appendChild(groupEl);
+        this._attachGroupToggles(groupEl);
+      }
+
+      const itemsContainer = groupEl.querySelector(".group-items");
+      const fragment = document.createDocumentFragment();
+      for (let i = alreadyRendered; i < alreadyRendered + toRender; i++) {
+        const temp = document.createElement("div");
+        temp.innerHTML = this._txItemHtml(g.items[i]);
+        fragment.appendChild(temp.firstElementChild);
+      }
+      itemsContainer.appendChild(fragment);
+      itemIndex = groupEnd;
+    }
+
+    const counter = list.querySelector(".tx-count");
+    if (this._visibleCount >= this._totalFilteredCount) {
+      counter?.remove();
+    } else if (counter) {
+      counter.textContent = `${this._visibleCount} von ${this._totalFilteredCount} Umsätzen`;
+    }
+  }
+
+  _ensureScrollListener(list) {
+    if (this._scrollListenerAttached) return;
+    this._scrollListenerAttached = true;
+    list.addEventListener("scroll", () => {
+      if (this._visibleCount >= this._totalFilteredCount) return;
+      const { scrollTop, scrollHeight, clientHeight } = list;
+      if (scrollHeight - scrollTop - clientHeight < 300) {
+        this._loadMore();
+      }
+    });
+  }
+
+  _attachGroupToggles(container) {
+    container.querySelectorAll(".group-toggle").forEach(toggle => {
+      if (toggle._bound) return;
+      toggle._bound = true;
       toggle.addEventListener("click", (e) => {
         e.stopPropagation();
         this._groupsCollapsed = !this._groupsCollapsed;
+        const list = this.shadowRoot.getElementById("tx-list");
         list.querySelectorAll(".tx-date-group").forEach(g => {
           g.classList.toggle("collapsed", this._groupsCollapsed);
         });
@@ -1139,6 +1235,7 @@ class RaibaPanel extends HTMLElement {
       .amount-positive { color: var(--success-color, #388e3c); }
 
       .no-results { padding: 32px; text-align: center; color: var(--secondary-text-color); }
+      .tx-count { text-align: center; padding: 16px; font-size: 13px; color: var(--secondary-text-color); }
 
       /* ── Detail view ── */
       .tx-detail { flex: 1; overflow-y: auto; padding: 16px 24px; }
