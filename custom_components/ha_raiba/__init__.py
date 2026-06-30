@@ -13,8 +13,7 @@ from .api import (
     RaibaMarkAllUnreadView,
     RaibaMarkIdsView,
     RaibaMarkReadView,
-    RaibaSyncStartView,
-    RaibaSyncStatusView,
+    RaibaSyncView,
     RaibaTransactionsView,
 )
 from .const import (
@@ -74,8 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.http.register_view(RaibaMarkIdsView)
     hass.http.register_view(RaibaMarkAllReadView)
     hass.http.register_view(RaibaMarkAllUnreadView)
-    hass.http.register_view(RaibaSyncStartView)
-    hass.http.register_view(RaibaSyncStatusView)
+    hass.http.register_view(RaibaSyncView)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 

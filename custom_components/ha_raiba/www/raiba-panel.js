@@ -439,45 +439,32 @@ class RaibaPanel extends HTMLElement {
     this._unreadCounts = counts;
   }
 
-  // ── Sync (2FA flow) ───────────────────────────────────────────────────────
+  // ── Sync (2FA flow — matches iOS app logic) ───────────────────────────────
 
   async _startSync() {
     this._syncing = true;
     this._syncSessionId = null;
     this._showSyncOverlay("Verbinde mit Bank…", 0.1);
 
+    const url = "/api/raiba/sync?action=start&pst=" + Date.now();
     try {
-      const data = await this._syncFetch("/api/raiba/sync/start");
-      console.log("[raiba-sync] start raw:", JSON.stringify(data));
-      this._handleSyncResponse(data);
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: "Bearer " + (this._hass?.auth?.data?.access_token || "") },
+        cache: "no-store",
+      });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const json = await resp.json();
+      this._handleSyncResponse(json);
     } catch (err) {
-      console.error("[raiba-sync] start error:", err);
-      this._hideSyncOverlay();
       this._syncing = false;
+      this._hideSyncOverlay();
       this._showToast("Sync fehlgeschlagen: " + err.message, "error");
     }
   }
 
   _handleSyncResponse(json) {
-    console.log("[raiba-sync] response:", JSON.stringify(json));
-    if (!json || typeof json !== "object") {
-      this._stopPolling();
-      this._syncing = false;
-      this._syncSessionId = null;
-      this._hideSyncOverlay();
-      this._showToast("Sync: Leere oder ungültige Antwort", "error");
-      return;
-    }
-    // Handle error responses that have no status field (e.g. proxy errors)
-    if (!json.status && (json.error || json.message)) {
-      this._stopPolling();
-      this._syncing = false;
-      this._syncSessionId = null;
-      this._hideSyncOverlay();
-      this._showToast("Sync-Fehler: " + (json.error || json.message), "error");
-      return;
-    }
-    const status = json.status || "";
+    const status = (json && json.status) || "";
 
     if (status === "waiting_tan") {
       this._syncSessionId = json.session || this._syncSessionId || "";
@@ -485,93 +472,76 @@ class RaibaPanel extends HTMLElement {
       const challenge = json.challenge || "";
       const banksCompleted = json.banksCompleted || 0;
       const progress = (banksCompleted + 1) / Math.max(banksCompleted + 2, 3);
-      this._showSyncOverlay(`${bank}\n\n${challenge}`, progress);
+      this._showSyncOverlay(bank + "\n\n" + challenge, progress);
       this._scheduleNextPoll();
+
     } else if (status === "done") {
-      this._stopPolling();
+      this._syncTimer = null;
       this._syncing = false;
       this._syncSessionId = null;
       const banks = json.banks || [];
       let msg = "";
       let totalNew = 0;
-      for (const bank of banks) {
-        if (bank.status === "error") {
-          msg += `⚠️ ${bank.name}: ${bank.error || "Fehler"}\n`;
-          continue;
-        }
-        for (const acc of (bank.accounts || [])) {
-          const newTx = acc.newTransactions || 0;
-          totalNew += newTx;
-          msg += newTx > 0 ? `${acc.accountNumber}: +${newTx} neu\n` : `${acc.accountNumber}: aktuell\n`;
+      for (const b of banks) {
+        if (b.status === "error") { msg += "\u26A0\uFE0F " + b.name + ": " + (b.error || "Fehler") + "\n"; continue; }
+        for (const acc of (b.accounts || [])) {
+          const n = acc.newTransactions || 0;
+          totalNew += n;
+          msg += n > 0 ? acc.accountNumber + ": +" + n + " neu\n" : acc.accountNumber + ": aktuell\n";
         }
       }
-      msg += totalNew > 0 ? `\n${totalNew} neue Buchungen` : "\nAlles aktuell";
-      this._showSyncOverlay("✓ Sync abgeschlossen\n\n" + msg, 1.0);
-      setTimeout(() => {
-        this._hideSyncOverlay();
-        this._fetchTransactions();
-      }, 2000);
+      msg += totalNew > 0 ? "\n" + totalNew + " neue Buchungen" : "\nAlles aktuell";
+      this._showSyncOverlay("\u2713 Sync abgeschlossen\n\n" + msg, 1.0);
+      setTimeout(() => { this._hideSyncOverlay(); this._fetchTransactions(); }, 2000);
+
     } else if (status === "timeout") {
-      this._stopPolling();
+      this._syncTimer = null;
       this._syncing = false;
       this._syncSessionId = null;
       this._hideSyncOverlay();
-      this._showToast("Timeout — 2FA nicht rechtzeitig bestätigt", "error");
+      this._showToast("Timeout \u2014 2FA nicht rechtzeitig best\u00E4tigt", "error");
+
     } else if (status === "error") {
-      this._stopPolling();
+      this._syncTimer = null;
       this._syncing = false;
       this._syncSessionId = null;
       this._hideSyncOverlay();
       this._showToast("Sync-Fehler: " + (json.message || json.error || "Unbekannt"), "error");
+
     } else {
-      // Unbekannter Status — stoppen
-      this._stopPolling();
+      this._syncTimer = null;
       this._syncing = false;
       this._syncSessionId = null;
       this._hideSyncOverlay();
-      this._showToast("Unerwartete Serverantwort: " + (status || JSON.stringify(json).substring(0, 80)), "error");
+      this._showToast("Unerwartete Antwort: " + JSON.stringify(json).substring(0, 120), "error");
     }
   }
 
   _scheduleNextPoll() {
-    this._stopPolling();
-    this._syncTimer = setTimeout(() => this._pollSyncStatus(), 3000);
+    if (this._syncTimer) clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(() => { this._pollSyncStatus(); }, 3000);
   }
 
-  _stopPolling() {
-    if (this._syncTimer) {
-      clearTimeout(this._syncTimer);
-      this._syncTimer = null;
-    }
-  }
+  _pollSyncStatus() {
+    if (!this._syncSessionId) { this._syncTimer = null; return; }
 
-  async _syncFetch(url) {
-    const token = this._hass?.auth?.data?.access_token || "";
-    const resp = await fetch(url, {
+    const url = "/api/raiba/sync?action=status&session=" + this._syncSessionId + "&pst=" + Date.now();
+    fetch(url, {
       method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: "Bearer " + (this._hass?.auth?.data?.access_token || "") },
       cache: "no-store",
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    return resp.json();
-  }
-
-  async _pollSyncStatus() {
-    if (!this._syncSessionId) {
-      this._stopPolling();
-      return;
-    }
-    try {
-      const data = await this._syncFetch(`/api/raiba/sync/status?session=${this._syncSessionId}`);
-      this._handleSyncResponse(data);
-    } catch (err) {
-      // Netzwerkfehler: nochmal versuchen (wie iOS-App)
-      this._scheduleNextPoll();
-    }
+    })
+      .then(resp => {
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        return resp.json();
+      })
+      .then(json => { this._handleSyncResponse(json); })
+      .catch(() => { this._scheduleNextPoll(); });
   }
 
   _cancelSync() {
-    this._stopPolling();
+    if (this._syncTimer) clearTimeout(this._syncTimer);
+    this._syncTimer = null;
     this._syncing = false;
     this._syncSessionId = null;
     this._hideSyncOverlay();

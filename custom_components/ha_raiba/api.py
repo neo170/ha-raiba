@@ -170,11 +170,11 @@ class RaibaMarkAllUnreadView(HomeAssistantView):
             return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
 
 
-class RaibaSyncStartView(HomeAssistantView):
-    """GET /api/raiba/sync/start — trigger FinTS sync."""
+class RaibaSyncView(HomeAssistantView):
+    """GET /api/raiba/sync?action=start or ?action=status&session=XXX"""
 
-    url = "/api/raiba/sync/start"
-    name = "api:raiba:sync:start"
+    url = "/api/raiba/sync"
+    name = "api:raiba:sync"
     requires_auth = True
 
     async def get(self, request):
@@ -183,46 +183,25 @@ class RaibaSyncStartView(HomeAssistantView):
         if config is None:
             return self.json_message("Not configured", HTTPStatus.SERVICE_UNAVAILABLE)
 
-        target = f"{_base_url(config)}/syncFinTS.php?action=start"
+        action = request.query.get("action", "")
+        if action not in ("start", "status"):
+            return self.json_message("Invalid action", HTTPStatus.BAD_REQUEST)
 
-        try:
-            async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
-                async with session.get(target, timeout=aiohttp.ClientTimeout(total=60)) as resp:
-                    if resp.status != 200:
-                        return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
-                    data = await _parse_json(resp)
-                    return self.json(data)
-        except Exception as err:
-            _LOGGER.error("RaibaSyncStartView error: %s", err)
-            return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
-
-
-class RaibaSyncStatusView(HomeAssistantView):
-    """GET /api/raiba/sync/status?session=XXX — poll FinTS sync status."""
-
-    url = "/api/raiba/sync/status"
-    name = "api:raiba:sync:status"
-    requires_auth = True
-
-    async def get(self, request):
-        hass: HomeAssistant = request.app["hass"]
-        config = _get_config(hass)
-        if config is None:
-            return self.json_message("Not configured", HTTPStatus.SERVICE_UNAVAILABLE)
-
+        # Build target URL with all query params
+        target = f"{_base_url(config)}/syncFinTS.php?action={action}"
         session_id = request.query.get("session", "")
-        if not session_id:
-            return self.json_message("Missing session parameter", HTTPStatus.BAD_REQUEST)
+        if session_id:
+            target += f"&session={session_id}"
 
-        target = f"{_base_url(config)}/syncFinTS.php?action=status&session={session_id}"
+        timeout = 60 if action == "start" else 30
 
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
-                async with session.get(target, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                async with session.get(target, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
                     if resp.status != 200:
                         return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
                     data = await _parse_json(resp)
                     return self.json(data)
         except Exception as err:
-            _LOGGER.error("RaibaSyncStatusView error: %s", err)
+            _LOGGER.error("RaibaSyncView error: %s", err)
             return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
