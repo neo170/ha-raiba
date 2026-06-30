@@ -591,9 +591,16 @@ class RaibaPanel extends HTMLElement {
 
   _showSyncOverlay(message, progress) {
     const overlay = this.shadowRoot.getElementById("sync-overlay");
+    const bar = this.shadowRoot.getElementById("sync-progress-bar");
+    if (!overlay.classList.contains("visible")) {
+      bar.style.transition = "none";
+      bar.style.width = "0%";
+      bar.offsetWidth; // force reflow
+      bar.style.transition = "";
+    }
     overlay.classList.add("visible");
     this.shadowRoot.getElementById("sync-message").textContent = message;
-    this.shadowRoot.getElementById("sync-progress-bar").style.width = `${Math.round(progress * 100)}%`;
+    bar.style.width = `${Math.round(progress * 100)}%`;
   }
 
   _hideSyncOverlay() {
