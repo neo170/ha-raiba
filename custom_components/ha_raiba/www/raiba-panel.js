@@ -2,6 +2,9 @@
  * Raiba Panel — Bank transactions for Home Assistant
  * Custom panel element: <raiba-panel>
  */
+;(function() {
+"use strict";
+if (customElements.get("raiba-panel")) return;
 
 const ACCOUNTS = [
   { tab: 0, label: "Alle Umsätze", konto: null, icon: "mdi:format-list-bulleted" },
@@ -445,8 +448,10 @@ class RaibaPanel extends HTMLElement {
 
     try {
       const data = await this._callApi("GET", `raiba/sync/start?pst=${Date.now()}`);
+      console.log("[raiba-sync] start raw:", JSON.stringify(data));
       this._handleSyncResponse(data);
     } catch (err) {
+      console.error("[raiba-sync] start error:", err);
       this._hideSyncOverlay();
       this._syncing = false;
       this._showToast("Sync fehlgeschlagen: " + err.message, "error");
@@ -454,6 +459,24 @@ class RaibaPanel extends HTMLElement {
   }
 
   _handleSyncResponse(json) {
+    console.log("[raiba-sync] response:", JSON.stringify(json));
+    if (!json || typeof json !== "object") {
+      this._stopPolling();
+      this._syncing = false;
+      this._syncSessionId = null;
+      this._hideSyncOverlay();
+      this._showToast("Sync: Leere oder ungültige Antwort", "error");
+      return;
+    }
+    // Handle error responses that have no status field (e.g. proxy errors)
+    if (!json.status && (json.error || json.message)) {
+      this._stopPolling();
+      this._syncing = false;
+      this._syncSessionId = null;
+      this._hideSyncOverlay();
+      this._showToast("Sync-Fehler: " + (json.error || json.message), "error");
+      return;
+    }
     const status = json.status || "";
 
     if (status === "waiting_tan") {
@@ -1186,3 +1209,4 @@ function _esc(str) {
 }
 
 customElements.define("raiba-panel", RaibaPanel);
+})();
