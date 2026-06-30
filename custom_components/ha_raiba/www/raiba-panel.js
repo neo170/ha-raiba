@@ -513,10 +513,8 @@ class RaibaPanel extends HTMLElement {
       const bank = json.bank || "";
       const challenge = json.challenge || "";
       const banksCompleted = json.banksCompleted || 0;
-      const banksTotal = json.banksTotal || Math.max(banksCompleted + 1, 2);
-      const progress = 0.1 + ((banksCompleted + 0.5) / banksTotal) * 0.85;
-      this._syncProgress = Math.max(this._syncProgress, progress);
-      this._showSyncOverlay(bank + "\n\n" + challenge, this._syncProgress);
+      const progress = (banksCompleted + 1) / Math.max(banksCompleted + 2, 3);
+      this._showSyncOverlay(bank + "\n\n" + challenge, progress);
       this._scheduleNextPoll();
 
     } else if (status === "done") {
@@ -593,10 +591,9 @@ class RaibaPanel extends HTMLElement {
 
   _showSyncOverlay(message, progress) {
     const overlay = this.shadowRoot.getElementById("sync-overlay");
-    const bar = this.shadowRoot.getElementById("sync-progress-bar");
     overlay.classList.add("visible");
     this.shadowRoot.getElementById("sync-message").textContent = message;
-    bar.style.width = `${Math.round(progress * 100)}%`;
+    this.shadowRoot.getElementById("sync-progress-bar").style.width = `${Math.round(progress * 100)}%`;
   }
 
   _hideSyncOverlay() {
@@ -1264,7 +1261,7 @@ class RaibaPanel extends HTMLElement {
       .sync-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
       .sync-message { font-size: 14px; white-space: pre-wrap; margin-bottom: 16px; color: var(--primary-text-color); min-height: 40px; }
       .sync-progress-wrap { height: 4px; background: var(--divider-color, #e0e0e0); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
-      .sync-progress-bar { height: 100%; background: var(--primary-color, #03a9f4); border-radius: 2px; width: 0%; }
+      .sync-progress-bar { height: 100%; background: var(--primary-color, #03a9f4); border-radius: 2px; transition: width 0.3s; width: 0%; }
       .btn-secondary { background: none; border: 1px solid var(--divider-color, #e0e0e0); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--primary-text-color); }
       .btn-secondary:hover { background: var(--secondary-background-color); }
 
