@@ -27,7 +27,11 @@ def _build_auth(config: dict) -> aiohttp.BasicAuth:
 
 
 def _base_url(config: dict) -> str:
-    return config[CONF_URL].rstrip("/")
+    url = config[CONF_URL].rstrip("/")
+    # Strip filename if URL points to a .php file
+    if url.split("?")[0].endswith(".php"):
+        url = url.rsplit("/", 1)[0]
+    return url
 
 
 async def _parse_json(resp: aiohttp.ClientResponse):
