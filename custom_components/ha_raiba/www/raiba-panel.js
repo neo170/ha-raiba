@@ -176,19 +176,54 @@ class RaibaPanel extends HTMLElement {
     const dateFromWrap = root.getElementById("date-from-wrap");
     const dateToWrap = root.getElementById("date-to-wrap");
 
-    dateFromEl.addEventListener("click", () => dateFromPicker.showPicker());
-    dateToEl.addEventListener("click", () => dateToPicker.showPicker());
+    dateFromEl.addEventListener("click", () => { if (!dateFromEl.value) dateFromPicker.showPicker(); });
+    dateToEl.addEventListener("click", () => { if (!dateToEl.value) dateToPicker.showPicker(); });
 
     // Set default date-from (today minus 4 weeks)
     dateFromEl.value = this._formatDateDE(this._dateFrom);
     dateFromPicker.value = this._dateFrom;
     dateFromWrap.classList.add("has-value");
+    dateFromEl.removeAttribute("readonly");
+
+    const parseDateInput = (str) => {
+      const m = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      if (m) return m[3] + "-" + m[2].padStart(2,"0") + "-" + m[1].padStart(2,"0");
+      const m2 = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m2) return str;
+      return null;
+    };
+
+    dateFromEl.addEventListener("input", () => {
+      const iso = parseDateInput(dateFromEl.value);
+      if (iso) {
+        this._dateFrom = iso;
+        dateFromPicker.value = iso;
+        this._renderTxList();
+        this._renderTxHeader();
+      }
+    });
+    dateFromEl.addEventListener("blur", () => {
+      if (this._dateFrom && dateFromEl.value) dateFromEl.value = this._formatDateDE(this._dateFrom);
+    });
+    dateToEl.addEventListener("input", () => {
+      const iso = parseDateInput(dateToEl.value);
+      if (iso) {
+        this._dateTo = iso;
+        dateToPicker.value = iso;
+        this._renderTxList();
+        this._renderTxHeader();
+      }
+    });
+    dateToEl.addEventListener("blur", () => {
+      if (this._dateTo && dateToEl.value) dateToEl.value = this._formatDateDE(this._dateTo);
+    });
 
     dateFromPicker.addEventListener("change", (e) => {
       const v = e.target.value;
       this._dateFrom = v;
       dateFromEl.value = v ? this._formatDateDE(v) : "";
       dateFromWrap.classList.toggle("has-value", !!v);
+      if (v) dateFromEl.removeAttribute("readonly"); else dateFromEl.setAttribute("readonly", "");
       this._renderTxList();
       this._renderTxHeader();
     });
@@ -197,6 +232,7 @@ class RaibaPanel extends HTMLElement {
       this._dateTo = v;
       dateToEl.value = v ? this._formatDateDE(v) : "";
       dateToWrap.classList.toggle("has-value", !!v);
+      if (v) dateToEl.removeAttribute("readonly"); else dateToEl.setAttribute("readonly", "");
       this._renderTxList();
       this._renderTxHeader();
     });
@@ -206,6 +242,7 @@ class RaibaPanel extends HTMLElement {
       dateFromPicker.value = "";
       this._dateFrom = "";
       dateFromWrap.classList.remove("has-value");
+      dateFromEl.setAttribute("readonly", "");
       this._renderTxList();
       this._renderTxHeader();
     });
@@ -215,6 +252,7 @@ class RaibaPanel extends HTMLElement {
       dateToPicker.value = "";
       this._dateTo = "";
       dateToWrap.classList.remove("has-value");
+      dateToEl.setAttribute("readonly", "");
       this._renderTxList();
       this._renderTxHeader();
     });
