@@ -198,8 +198,19 @@ class RaibaSyncView(HomeAssistantView):
 
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
-                async with session.get(target, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
-                    _LOGGER.warning("RaibaSyncView response status: %s, url: %s", resp.status, resp.url)
+                async with session.get(target, timeout=aiohttp.ClientTimeout(total=timeout), allow_redirects=False) as resp:
+                    _LOGGER.warning("RaibaSyncView response status: %s, url: %s, headers: %s", resp.status, resp.url, dict(resp.headers))
+                    if resp.status in (301, 302, 303, 307, 308):
+                        location = resp.headers.get("Location", "")
+                        _LOGGER.warning("RaibaSyncView REDIRECT to: %s", location)
+                        # Follow redirect manually with auth
+                        async with session.get(location, timeout=aiohttp.ClientTimeout(total=timeout), allow_redirects=False) as resp2:
+                            _LOGGER.warning("RaibaSyncView redirect response: %s, url: %s", resp2.status, resp2.url)
+                            if resp2.status != 200:
+                                return self.json_message(f"Backend HTTP {resp2.status}", HTTPStatus.BAD_GATEWAY)
+                            data = await _parse_json(resp2)
+                            _LOGGER.warning("RaibaSyncView response keys: %s", list(data.keys()) if isinstance(data, dict) else type(data))
+                            return self.json(data)
                     if resp.status != 200:
                         return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
                     data = await _parse_json(resp)
