@@ -447,7 +447,7 @@ class RaibaPanel extends HTMLElement {
     this._showSyncOverlay("Verbinde mit Bank…", 0.1);
 
     try {
-      const data = await this._callApi("GET", `raiba/sync/start?pst=${Date.now()}`);
+      const data = await this._syncFetch("/api/raiba/sync/start");
       console.log("[raiba-sync] start raw:", JSON.stringify(data));
       this._handleSyncResponse(data);
     } catch (err) {
@@ -545,13 +545,24 @@ class RaibaPanel extends HTMLElement {
     }
   }
 
+  async _syncFetch(url) {
+    const token = this._hass?.auth?.data?.access_token || "";
+    const resp = await fetch(url, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return resp.json();
+  }
+
   async _pollSyncStatus() {
     if (!this._syncSessionId) {
       this._stopPolling();
       return;
     }
     try {
-      const data = await this._callApi("GET", `raiba/sync/status?session=${this._syncSessionId}&pst=${Date.now()}`);
+      const data = await this._syncFetch(`/api/raiba/sync/status?session=${this._syncSessionId}`);
       this._handleSyncResponse(data);
     } catch (err) {
       // Netzwerkfehler: nochmal versuchen (wie iOS-App)
