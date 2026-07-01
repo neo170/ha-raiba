@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .api import (
+    RaibaAccountsView,
     RaibaMarkAllReadView,
     RaibaMarkAllUnreadView,
     RaibaMarkIdsView,
@@ -68,6 +69,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DATA_PANEL_REGISTERED] = True
 
     # Register REST API views
+    hass.http.register_view(RaibaAccountsView)
     hass.http.register_view(RaibaTransactionsView)
     hass.http.register_view(RaibaMarkReadView)
     hass.http.register_view(RaibaMarkIdsView)

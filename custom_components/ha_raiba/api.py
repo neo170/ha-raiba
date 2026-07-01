@@ -42,7 +42,7 @@ async def _parse_json(resp: aiohttp.ClientResponse):
 
 
 class RaibaTransactionsView(HomeAssistantView):
-    """GET /api/raiba/transactions?tab=N"""
+    """GET /api/raiba/transactions?konto=XXXX"""
 
     url = "/api/raiba/transactions"
     name = "api:raiba:transactions"
@@ -54,8 +54,10 @@ class RaibaTransactionsView(HomeAssistantView):
         if config is None:
             return self.json_message("Not configured", HTTPStatus.SERVICE_UNAVAILABLE)
 
-        tab = request.query.get("tab", "0")
-        target = f"{_base_url(config)}/getData.php?tab={tab}"
+        konto = request.query.get("konto", "")
+        target = f"{_base_url(config)}/getData.php"
+        if konto:
+            target += f"?konto={konto}"
 
         try:
             async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
@@ -66,6 +68,33 @@ class RaibaTransactionsView(HomeAssistantView):
                     return self.json(data)
         except Exception as err:
             _LOGGER.error("RaibaTransactionsView error: %s", err)
+            return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
+
+
+class RaibaAccountsView(HomeAssistantView):
+    """GET /api/raiba/accounts — returns account list from DB"""
+
+    url = "/api/raiba/accounts"
+    name = "api:raiba:accounts"
+    requires_auth = True
+
+    async def get(self, request):
+        hass: HomeAssistant = request.app["hass"]
+        config = _get_config(hass)
+        if config is None:
+            return self.json_message("Not configured", HTTPStatus.SERVICE_UNAVAILABLE)
+
+        target = f"{_base_url(config)}/getData.php?action=getAccounts"
+
+        try:
+            async with aiohttp.ClientSession(auth=_build_auth(config)) as session:
+                async with session.get(target, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                    if resp.status != 200:
+                        return self.json_message(f"Backend HTTP {resp.status}", HTTPStatus.BAD_GATEWAY)
+                    data = await _parse_json(resp)
+                    return self.json(data)
+        except Exception as err:
+            _LOGGER.error("RaibaAccountsView error: %s", err)
             return self.json_message(str(err), HTTPStatus.BAD_GATEWAY)
 
 

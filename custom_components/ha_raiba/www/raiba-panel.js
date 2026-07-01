@@ -5,24 +5,17 @@
 ;(function() {
 "use strict";
 
-const ACCOUNTS = [
-  { tab: 0, label: "Alle Umsätze", konto: null, icon: "mdi:format-list-bulleted" },
-  { tab: 2, label: "Dkb", konto: "1009491828", icon: "mdi:bank-outline" },
-  { tab: 3, label: "Strasslach", konto: "1055437", icon: "mdi:home-city" },
-  { tab: 4, label: "DKB TG", konto: "1021344369", icon: "mdi:piggy-bank" },
-  { tab: 1, label: "Rileg", konto: "1026704", icon: "mdi:bank" },
-];
-
 // ────────────────────────────────────────────────────────────────────────────
 class RaibaPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._hass = null;
+    this._accounts = [];     // loaded from API
     this._transactions = [];
     this._saldos = {};
     this._unreadCounts = {};
-    this._selectedTab = 0;
+    this._selectedKonto = null;  // null = "Alle Umsätze"
     this._selectedTx = null;
     this._search = "";
     const _now = new Date(); const _firstLastMonth = new Date(_now.getFullYear(), _now.getMonth() - 1, 1);
@@ -47,7 +40,7 @@ class RaibaPanel extends HTMLElement {
     if (!this._rendered) {
       this._rendered = true;
       this._buildShell();
-      this._fetchTransactions();
+      this._fetchAccounts();
     }
   }
 
@@ -57,7 +50,7 @@ class RaibaPanel extends HTMLElement {
     if (this._hass && !this._rendered) {
       this._rendered = true;
       this._buildShell();
-      this._fetchTransactions();
+      this._fetchAccounts();
     }
   }
 
@@ -282,7 +275,7 @@ class RaibaPanel extends HTMLElement {
     root.getElementById("account-list").addEventListener("click", (e) => {
       const item = e.target.closest(".account-item");
       if (item) {
-        this._selectedTab = parseInt(item.dataset.tab, 10);
+        this._selectedKonto = item.dataset.konto || null;
         this._selectedTx = null;
         this._fetchTransactions();
         this._openDetail();
@@ -320,11 +313,23 @@ class RaibaPanel extends HTMLElement {
 
   // ── Data ──────────────────────────────────────────────────────────────────
 
+  async _fetchAccounts() {
+    try {
+      const data = await this._callApi("GET", "raiba/accounts");
+      this._accounts = data.accounts || [];
+    } catch (err) {
+      this._accounts = [];
+    }
+    this._renderAccountList();
+    this._fetchTransactions();
+  }
+
   async _fetchTransactions() {
     this._loading = true;
     this._renderTxHeader();
     try {
-      const data = await this._callApi("GET", `raiba/transactions?tab=${this._selectedTab}`);
+      const param = this._selectedKonto ? `?konto=${this._selectedKonto}` : "";
+      const data = await this._callApi("GET", `raiba/transactions${param}`);
       this._transactions = data.Transactions || [];
       this._saldos = data.Saldos || {};
       this._unreadCounts = data.UnreadCounts || {};
@@ -356,7 +361,7 @@ class RaibaPanel extends HTMLElement {
   async _markAllToggle() {
     const visible = this._getFilteredTransactions();
     const hasUnread = visible.some(t => !t.ReadAt);
-    const account = ACCOUNTS.find(a => a.tab === this._selectedTab);
+    const konto = this._selectedKonto || "";
 
     if (hasUnread) {
       // Mark all read
@@ -372,7 +377,6 @@ class RaibaPanel extends HTMLElement {
         this._showToast("Alle als gelesen markiert", "success");
         this._markIds(ids, true);
       } else {
-        const konto = account.konto || "";
         try {
           await this._callApi("GET", `raiba/mark_all_read${konto ? "?konto=" + konto : ""}`);
           for (const tx of this._transactions) {
@@ -411,7 +415,6 @@ class RaibaPanel extends HTMLElement {
         this._showToast("Alle als ungelesen markiert", "success");
         this._markIds(ids, false);
       } else {
-        const konto = account.konto || "";
         try {
           await this._callApi("GET", `raiba/mark_all_unread${konto ? "?konto=" + konto : ""}`);
           const count = this._transactions.filter(tx => tx.ReadAt).length;
@@ -444,10 +447,8 @@ class RaibaPanel extends HTMLElement {
   _updateBadges() {
     const items = this.shadowRoot.querySelectorAll(".account-item");
     for (const el of items) {
-      const tab = parseInt(el.dataset.tab, 10);
-      const acc = ACCOUNTS.find(a => a.tab === tab);
-      if (!acc) continue;
-      const unread = acc.konto ? (this._unreadCounts[acc.konto] || 0) : (this._unreadCounts["Gesamt"] || 0);
+      const konto = el.dataset.konto || null;
+      const unread = konto ? (this._unreadCounts[konto] || 0) : (this._unreadCounts["Gesamt"] || 0);
       let badge = el.querySelector(".badge");
       if (unread > 0) {
         el.classList.add("has-unread");
@@ -606,33 +607,55 @@ class RaibaPanel extends HTMLElement {
     const list = this.shadowRoot.getElementById("account-list");
     if (!list) return;
 
-    list.innerHTML = ACCOUNTS.map(acc => {
-      const active = acc.tab === this._selectedTab ? " active" : "";
-      const saldo = acc.konto ? this._saldos[acc.konto] : this._saldos["Gesamt"];
-      const unread = acc.konto
-        ? (this._unreadCounts[acc.konto] || 0)
+    const aktiv = this._accounts.filter(a => a.sync == 1);
+    const archiv = this._accounts.filter(a => a.sync != 1);
+
+    const renderItem = (konto, label, icon) => {
+      const active = this._selectedKonto === konto ? " active" : "";
+      const saldo = konto ? this._saldos[konto] : this._saldos["Gesamt"];
+      const unread = konto
+        ? (this._unreadCounts[konto] || 0)
         : (this._unreadCounts["Gesamt"] || 0);
       const hasUnread = unread > 0 ? " has-unread" : "";
       const badge = unread > 0 ? `<span class="badge">${unread}</span>` : "";
       const saldoStr = saldo ? this._formatAmount(saldo) : "";
-
       return `
-        <div class="account-item${active}${hasUnread}" data-tab="${acc.tab}">
-          <ha-icon icon="${acc.icon}"></ha-icon>
+        <div class="account-item${active}${hasUnread}" data-konto="${konto || ""}">
+          <ha-icon icon="${icon}"></ha-icon>
           <div class="account-info">
-            <div class="account-name">${_esc(acc.label)}${badge}</div>
+            <div class="account-name">${_esc(label)}${badge}</div>
             ${saldoStr ? `<div class="account-saldo">${saldoStr} €</div>` : ""}
           </div>
         </div>`;
-    }).join("");
+    };
+
+    let html = "";
+    // Aktiv section
+    html += `<div class="account-section-header">Aktiv</div>`;
+    html += renderItem(null, "Alle Umsätze", "mdi:format-list-bulleted");
+    for (const acc of aktiv) {
+      html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, "mdi:bank");
+    }
+    // Archiv section
+    if (archiv.length) {
+      html += `<div class="account-section-header archiv">Archiv</div>`;
+      for (const acc of archiv) {
+        html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, "mdi:archive-outline");
+      }
+    }
+
+    list.innerHTML = html;
   }
 
   _renderTxHeader() {
     const header = this.shadowRoot.getElementById("tx-header");
     if (!header) return;
-    const acc = ACCOUNTS.find(a => a.tab === this._selectedTab);
+    const acc = this._selectedKonto
+      ? this._accounts.find(a => a.kontonummer === this._selectedKonto)
+      : null;
+    const label = acc ? (acc.kontoname || acc.kontonummer) : "Alle Umsätze";
     header.innerHTML = `
-      <div class="tx-header-title">${_esc(acc.label)}</div>
+      <div class="tx-header-title">${_esc(label)}</div>
     `;
   }
 
@@ -1042,18 +1065,15 @@ class RaibaPanel extends HTMLElement {
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   _accountIcon(ownAccount) {
-    switch (ownAccount) {
-      case "1026704": return "mdi:bank";
-      case "1009491828": return "mdi:bank-outline";
-      case "1055437": return "mdi:home-city";
-      case "1021344369": return "mdi:piggy-bank";
-      default: return "mdi:format-list-bulleted";
-    }
+    const acc = this._accounts.find(a => a.kontonummer === ownAccount);
+    if (acc && acc.sync == 1) return "mdi:bank";
+    if (acc) return "mdi:archive-outline";
+    return "mdi:format-list-bulleted";
   }
 
   _accountName(ownAccount) {
-    const acc = ACCOUNTS.find(a => a.konto === ownAccount);
-    return acc ? acc.label : ownAccount || "";
+    const acc = this._accounts.find(a => a.kontonummer === ownAccount);
+    return acc ? (acc.kontoname || acc.kontonummer) : ownAccount || "";
   }
 
   _formatDate(dateStr) {
@@ -1188,6 +1208,8 @@ class RaibaPanel extends HTMLElement {
       .group-select:focus { border-color: var(--primary-color, #03a9f4); }
 
       .account-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+      .account-section-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--secondary-text-color); padding: 12px 16px 4px; }
+      .account-section-header.archiv { margin-top: 8px; border-top: 1px solid var(--divider-color, #e0e0e0); padding-top: 12px; }
       .account-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; }
       .account-item:hover { background: var(--secondary-background-color, #f5f5f5); }
       .account-item.active { background: color-mix(in srgb, var(--primary-color, #03a9f4) 12%, transparent); border-right: 3px solid var(--primary-color, #03a9f4); }
