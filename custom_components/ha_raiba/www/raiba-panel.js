@@ -1226,7 +1226,6 @@ class RaibaPanel extends HTMLElement {
       .account-section-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--secondary-text-color); padding: 12px 16px 4px; display: flex; align-items: center; gap: 4px; }
       .account-section-header.archiv { margin-top: 8px; border-top: 1px solid var(--divider-color, #e0e0e0); padding-top: 12px; cursor: pointer; user-select: none; }
       .account-section-header.archiv:hover { color: var(--primary-text-color); }
-      .account-section-header .group-toggle { font-size: 16px; line-height: 1; transition: transform 0.2s; }
       .account-section-header.collapsed .group-toggle { transform: rotate(-90deg); }
       .archiv-items { display: block; }
       .account-section-header.collapsed + .archiv-items { display: none; }
