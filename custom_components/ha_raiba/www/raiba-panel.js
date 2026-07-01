@@ -23,6 +23,7 @@ class RaibaPanel extends HTMLElement {
     this._dateTo = "";
     this._groupMode = "standard";
     this._groupsCollapsed = false;
+    this._archivCollapsed = true;
     this._loading = false;
     this._syncing = false;
     this._syncSessionId = null;
@@ -638,13 +639,26 @@ class RaibaPanel extends HTMLElement {
     }
     // Archiv section
     if (archiv.length) {
-      html += `<div class="account-section-header archiv">Archiv</div>`;
+      const collClass = this._archivCollapsed ? " collapsed" : "";
+      html += `<div class="account-section-header archiv${collClass}" id="archiv-header"><span class="group-toggle">&#x25BE;</span>Archiv</div>`;
+      html += `<div class="archiv-items">`;
       for (const acc of archiv) {
         html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, acc.icon || "mdi:archive-outline");
       }
+      html += `</div>`;
     }
 
     list.innerHTML = html;
+
+    const archivHeader = list.querySelector("#archiv-header");
+    if (archivHeader) {
+      archivHeader.addEventListener("click", () => {
+        this._archivCollapsed = !this._archivCollapsed;
+        archivHeader.classList.toggle("collapsed", this._archivCollapsed);
+        const items = list.querySelector(".archiv-items");
+        if (items) items.style.display = this._archivCollapsed ? "none" : "";
+      });
+    }
   }
 
   _renderTxHeader() {
@@ -1209,8 +1223,13 @@ class RaibaPanel extends HTMLElement {
       .group-select:focus { border-color: var(--primary-color, #03a9f4); }
 
       .account-list { flex: 1; overflow-y: auto; padding: 8px 0; }
-      .account-section-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--secondary-text-color); padding: 12px 16px 4px; }
-      .account-section-header.archiv { margin-top: 8px; border-top: 1px solid var(--divider-color, #e0e0e0); padding-top: 12px; }
+      .account-section-header { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--secondary-text-color); padding: 12px 16px 4px; display: flex; align-items: center; gap: 4px; }
+      .account-section-header.archiv { margin-top: 8px; border-top: 1px solid var(--divider-color, #e0e0e0); padding-top: 12px; cursor: pointer; user-select: none; }
+      .account-section-header.archiv:hover { color: var(--primary-text-color); }
+      .account-section-header .group-toggle { font-size: 16px; line-height: 1; transition: transform 0.2s; }
+      .account-section-header.collapsed .group-toggle { transform: rotate(-90deg); }
+      .archiv-items { display: block; }
+      .account-section-header.collapsed + .archiv-items { display: none; }
       .account-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background 0.15s; }
       .account-item:hover { background: var(--secondary-background-color, #f5f5f5); }
       .account-item.active { background: color-mix(in srgb, var(--primary-color, #03a9f4) 12%, transparent); border-right: 3px solid var(--primary-color, #03a9f4); }
