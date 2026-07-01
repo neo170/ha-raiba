@@ -634,13 +634,13 @@ class RaibaPanel extends HTMLElement {
     html += `<div class="account-section-header">Aktiv</div>`;
     html += renderItem(null, "Alle Umsätze", "mdi:format-list-bulleted");
     for (const acc of aktiv) {
-      html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, "mdi:bank");
+      html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, acc.icon || "mdi:bank");
     }
     // Archiv section
     if (archiv.length) {
       html += `<div class="account-section-header archiv">Archiv</div>`;
       for (const acc of archiv) {
-        html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, "mdi:archive-outline");
+        html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, acc.icon || "mdi:archive-outline");
       }
     }
 
@@ -1066,6 +1066,7 @@ class RaibaPanel extends HTMLElement {
 
   _accountIcon(ownAccount) {
     const acc = this._accounts.find(a => a.kontonummer === ownAccount);
+    if (acc && acc.icon) return acc.icon;
     if (acc && acc.sync == 1) return "mdi:bank";
     if (acc) return "mdi:archive-outline";
     return "mdi:format-list-bulleted";
