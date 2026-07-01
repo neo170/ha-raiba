@@ -276,8 +276,13 @@ class RaibaPanel extends HTMLElement {
     root.getElementById("account-list").addEventListener("click", (e) => {
       const item = e.target.closest(".account-item");
       if (item) {
+        if (this._selectedTx) {
+          // Close open tx detail and consume its pushed history entry,
+          // so the browser back button keeps working afterwards.
+          this._hideDetail();
+          history.back();
+        }
         this._selectedKonto = item.dataset.konto || null;
-        this._selectedTx = null;
         this._fetchTransactions();
         this._openDetail();
       }
