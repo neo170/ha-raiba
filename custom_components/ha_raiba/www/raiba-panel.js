@@ -979,6 +979,9 @@ class RaibaPanel extends HTMLElement {
     let descriptionHtml = _esc(tx.Description || "").replace(/\n/g, "<br>");
     if (tx.AccountNumber) {
       descriptionHtml += `<br><br>IBAN: ${_esc(tx.AccountNumber)}`;
+      if (tx.BankName) {
+        descriptionHtml += `<br>Bank: ${_esc(tx.BankName)}`;
+      }
     }
 
     detail.innerHTML = `
