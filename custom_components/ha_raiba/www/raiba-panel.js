@@ -15,7 +15,7 @@ class RaibaPanel extends HTMLElement {
     this._transactions = [];
     this._saldos = {};
     this._unreadCounts = {};
-    this._selectedKonto = null;  // null = "Alle Umsätze"
+    this._selectedKonto = null;  // null = "Alle Konten"
     this._selectedTx = null;
     this._search = "";
     const _now = new Date(); const _firstLastMonth = new Date(_now.getFullYear(), _now.getMonth() - 1, 1);
@@ -638,7 +638,7 @@ class RaibaPanel extends HTMLElement {
     let html = "";
     // Aktiv section
     html += `<div class="account-section-header">Aktiv</div>`;
-    html += renderItem(null, "Alle Umsätze", "mdi:format-list-bulleted");
+    html += renderItem(null, "Alle Konten", "mdi:format-list-bulleted");
     for (const acc of aktiv) {
       html += renderItem(acc.kontonummer, acc.kontoname || acc.kontonummer, acc.icon || "mdi:bank");
     }
@@ -672,7 +672,7 @@ class RaibaPanel extends HTMLElement {
     const acc = this._selectedKonto
       ? this._accounts.find(a => a.kontonummer === this._selectedKonto)
       : null;
-    const label = acc ? (acc.kontoname || acc.kontonummer) : "Alle Umsätze";
+    const label = acc ? (acc.kontoname || acc.kontonummer) : "Alle Konten";
     header.innerHTML = `
       <div class="tx-header-title">${_esc(label)}</div>
     `;
