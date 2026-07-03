@@ -984,6 +984,10 @@ class RaibaPanel extends HTMLElement {
       }
     }
 
+    const bookingTypeHtml = tx.BookingType
+      ? `<div><strong>Art:</strong> ${_esc(tx.BookingType)}</div>`
+      : "";
+
     detail.innerHTML = `
       <div class="detail-back">
         <button class="btn-back" id="btn-detail-back">
@@ -1003,6 +1007,7 @@ class RaibaPanel extends HTMLElement {
         <div class="detail-dates">
           <div><strong>Datum:</strong> ${_esc(this._formatDate(tx.Date))}</div>
           <div><strong>Valuta:</strong> ${_esc(this._formatDate(tx.BookingDate))}</div>
+          ${bookingTypeHtml}
         </div>
         <div class="detail-description">${descriptionHtml}</div>
       </div>
