@@ -842,6 +842,17 @@ class RaibaPanel extends HTMLElement {
   }
 
   _buildGroups(items) {
+    // Vorgemerkte Umsätze immer als eigene Gruppe ganz oben anzeigen.
+    const pending = items.filter(tx => tx.Pending);
+    const normal = items.filter(tx => !tx.Pending);
+    const groups = this._buildDateGroups(normal);
+    if (pending.length) {
+      groups.unshift({ label: "Vorgemerkt", items: pending });
+    }
+    return groups;
+  }
+
+  _buildDateGroups(items) {
     if (this._groupMode === "weekly") return this._groupWeekly(items);
     if (this._groupMode === "monthly") return this._groupMonthly(items);
     if (this._groupMode === "yearly") return this._groupYearly(items);
@@ -930,6 +941,8 @@ class RaibaPanel extends HTMLElement {
   _txItemHtml(tx) {
     const isUnread = !tx.ReadAt;
     const unreadClass = isUnread ? " unread" : "";
+    const isPending = !!tx.Pending;
+    const pendingClass = isPending ? " pending" : "";
     const amount = this._formatTxAmount(tx.Amount, tx.CreditDebit);
     const amountClass = tx.CreditDebit === "S" ? "amount-negative" : "amount-positive";
     const date = this._formatDate(tx.Date);
@@ -941,9 +954,10 @@ class RaibaPanel extends HTMLElement {
     }
     const subtitle = desc ? `${date}: ${desc}` : date;
     const accountIcon = this._accountIcon(tx.OwnAccount);
+    const pendingBadge = isPending ? `<span class="tx-pending-badge">Vorgemerkt</span>` : "";
 
     return `
-      <div class="tx-item${unreadClass}" data-id="${_esc(tx.Id)}">
+      <div class="tx-item${unreadClass}${pendingClass}" data-id="${_esc(tx.Id)}">
         <div class="tx-icon">
           <ha-icon icon="${accountIcon}"></ha-icon>
           <button class="tx-read-toggle" data-id="${_esc(tx.Id)}" title="Gelesen/Ungelesen">
@@ -951,7 +965,7 @@ class RaibaPanel extends HTMLElement {
           </button>
         </div>
         <div class="tx-info">
-          <div class="tx-name">${_esc(tx.Name || "(Unbekannt)")}</div>
+          <div class="tx-name">${_esc(tx.Name || "(Unbekannt)")}${pendingBadge}</div>
           <div class="tx-sub">${_esc(subtitle)}</div>
         </div>
         <div class="tx-amount ${amountClass}">${amount}</div>
@@ -988,6 +1002,10 @@ class RaibaPanel extends HTMLElement {
       ? `<div><strong>Art:</strong> ${_esc(tx.BookingType)}</div>`
       : "";
 
+    const pendingHtml = tx.Pending
+      ? `<div class="detail-pending-badge"><ha-icon icon="mdi:clock-outline"></ha-icon> Vorgemerkt – noch nicht gebucht</div>`
+      : "";
+
     detail.innerHTML = `
       <div class="detail-back">
         <button class="btn-back" id="btn-detail-back">
@@ -1004,6 +1022,7 @@ class RaibaPanel extends HTMLElement {
         </div>
         <h2 class="detail-name">${_esc(tx.Name || "(Unbekannt)")}</h2>
         <div class="detail-amount ${amountClass}">${amount} €</div>
+        ${pendingHtml}
         <div class="detail-dates">
           <div><strong>Datum:</strong> ${_esc(this._formatDate(tx.Date))}</div>
           <div><strong>Valuta:</strong> ${_esc(this._formatDate(tx.BookingDate))}</div>
@@ -1287,6 +1306,13 @@ class RaibaPanel extends HTMLElement {
       .tx-amount { font-size: 14px; font-weight: 500; white-space: nowrap; }
       .amount-negative { color: var(--error-color, #d32f2f); }
       .amount-positive { color: var(--success-color, #388e3c); }
+
+      /* ── Vorgemerkte (pending) Umsätze ── */
+      .tx-item.pending { background: color-mix(in srgb, var(--warning-color, #ffa600) 8%, transparent); }
+      .tx-item.pending:hover { background: color-mix(in srgb, var(--warning-color, #ffa600) 16%, transparent); }
+      .tx-item.pending .tx-icon ha-icon { color: var(--warning-color, #ffa600); }
+      .tx-pending-badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; font-size: 10px; font-weight: 600; line-height: 16px; vertical-align: middle; background: var(--warning-color, #ffa600); color: #fff; }
+      .detail-pending-badge { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0; padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, var(--warning-color, #ffa600) 18%, transparent); color: var(--warning-color, #ffa600); }
 
       .no-results { padding: 32px; text-align: center; color: var(--secondary-text-color); }
       .tx-count { text-align: center; padding: 16px; font-size: 13px; color: var(--secondary-text-color); }
