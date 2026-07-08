@@ -976,7 +976,7 @@ class RaibaPanel extends HTMLElement {
     const name = tx.Name || "(Unbekannt)";
     // Gutschrift (Haben/positiv) => "von: ", Abbuchung (Soll/negativ) => "an: "
     const prefix = tx.CreditDebit === "S" ? "an: " : "von: ";
-    return prefix + name;
+    return `<span class="tx-name-prefix">${_esc(prefix)}</span>${_esc(name)}`;
   }
 
   _txItemHtml(tx) {
@@ -1006,7 +1006,7 @@ class RaibaPanel extends HTMLElement {
           </button>
         </div>
         <div class="tx-info">
-          <div class="tx-name">${_esc(this._txDisplayName(tx))}${pendingBadge}</div>
+          <div class="tx-name">${this._txDisplayName(tx)}${pendingBadge}</div>
           <div class="tx-sub">${_esc(subtitle)}</div>
         </div>
         <div class="tx-amount ${amountClass}">${amount}</div>
@@ -1343,6 +1343,7 @@ class RaibaPanel extends HTMLElement {
       .tx-item:hover > .tx-icon > ha-icon:first-child { visibility: hidden; }
       .tx-info { flex: 1; min-width: 0; }
       .tx-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tx-name-prefix { font-size: 0.6em; color: var(--secondary-text-color, #888); }
       .tx-sub { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
       .tx-amount { font-size: 14px; font-weight: 500; white-space: nowrap; }
       .amount-negative { color: var(--error-color, #d32f2f); }
