@@ -1343,7 +1343,7 @@ class RaibaPanel extends HTMLElement {
       .tx-item:hover > .tx-icon > ha-icon:first-child { visibility: hidden; }
       .tx-info { flex: 1; min-width: 0; }
       .tx-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .tx-name-prefix { font-size: 0.6em; color: var(--secondary-text-color, #888); }
+      .tx-name-prefix { font-size: 0.7em; color: var(--secondary-text-color, #888); }
       .tx-sub { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
       .tx-amount { font-size: 14px; font-weight: 500; white-space: nowrap; }
       .amount-negative { color: var(--error-color, #d32f2f); }
