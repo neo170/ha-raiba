@@ -972,6 +972,13 @@ class RaibaPanel extends HTMLElement {
     return `${y}-${m}-${d}`;
   }
 
+  _txDisplayName(tx) {
+    const name = tx.Name || "(Unbekannt)";
+    // Gutschrift (Haben/positiv) => "von: ", Abbuchung (Soll/negativ) => "an: "
+    const prefix = tx.CreditDebit === "S" ? "an: " : "von: ";
+    return prefix + name;
+  }
+
   _txItemHtml(tx) {
     const isUnread = !tx.ReadAt;
     const unreadClass = isUnread ? " unread" : "";
@@ -999,7 +1006,7 @@ class RaibaPanel extends HTMLElement {
           </button>
         </div>
         <div class="tx-info">
-          <div class="tx-name">${_esc(tx.Name || "(Unbekannt)")}${pendingBadge}</div>
+          <div class="tx-name">${_esc(this._txDisplayName(tx))}${pendingBadge}</div>
           <div class="tx-sub">${_esc(subtitle)}</div>
         </div>
         <div class="tx-amount ${amountClass}">${amount}</div>
