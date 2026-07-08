@@ -95,7 +95,7 @@ class RaibaPanel extends HTMLElement {
             <div class="sidebar-toolbar">
               <div class="search-wrap" id="search-wrap">
                 <ha-icon class="search-icon" icon="mdi:magnify"></ha-icon>
-                <input id="search" type="search" placeholder="Suchen…" autocomplete="off">
+                <input id="search" type="search" placeholder="Suchen… (z.B. >1000 für Beträge)" autocomplete="off">
                 <button id="btn-search-clear" class="search-clear" title="Zurücksetzen">
                   <ha-icon icon="mdi:close"></ha-icon>
                 </button>
@@ -681,16 +681,25 @@ class RaibaPanel extends HTMLElement {
   _getFilteredTransactions() {
     let items = this._transactions;
     if (this._search) {
-      const q = this._search.toLowerCase();
-      items = items.filter(tx =>
-        (tx.Name || "").toLowerCase().includes(q) ||
-        (tx.Date || "").toLowerCase().includes(q) ||
-        (tx.BookingDate || "").toLowerCase().includes(q) ||
-        (tx.Amount || "").toLowerCase().includes(q) ||
-        (tx.Description || "").toLowerCase().includes(q) ||
-        (tx.AccountNumber || "").toLowerCase().includes(q) ||
-        (tx.OwnAccount || "").toLowerCase().includes(q)
-      );
+      const trimmed = this._search.trim();
+      if (trimmed.startsWith(">")) {
+        // Betragssuche: alle Umsätze deren (absoluter) Betrag größer als der eingegebene Wert ist
+        const threshold = this._parseSearchAmount(trimmed.slice(1));
+        if (threshold !== null) {
+          items = items.filter(tx => Math.abs(parseFloat(tx.Amount) || 0) > threshold);
+        }
+      } else {
+        const q = trimmed.toLowerCase();
+        items = items.filter(tx =>
+          (tx.Name || "").toLowerCase().includes(q) ||
+          (tx.Date || "").toLowerCase().includes(q) ||
+          (tx.BookingDate || "").toLowerCase().includes(q) ||
+          (tx.Amount || "").toLowerCase().includes(q) ||
+          (tx.Description || "").toLowerCase().includes(q) ||
+          (tx.AccountNumber || "").toLowerCase().includes(q) ||
+          (tx.OwnAccount || "").toLowerCase().includes(q)
+        );
+      }
     }
     if (this._dateFrom) {
       items = items.filter(tx => (tx.Date || "") >= this._dateFrom);
@@ -699,6 +708,17 @@ class RaibaPanel extends HTMLElement {
       items = items.filter(tx => (tx.Date || "") <= this._dateTo);
     }
     return items;
+  }
+
+  _parseSearchAmount(str) {
+    let s = (str || "").replace(/[€\s]/g, "");
+    if (!s) return null;
+    if (s.includes(",")) {
+      // Deutsches Format: Punkt = Tausender, Komma = Dezimaltrennzeichen
+      s = s.replace(/\./g, "").replace(",", ".");
+    }
+    const val = parseFloat(s);
+    return isNaN(val) ? null : val;
   }
 
   _hasActiveFilters() {
