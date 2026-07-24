@@ -13,13 +13,12 @@ Projektwissen für KI-Agenten und Entwickler. Committet, damit es mit dem Repo m
 
 ## Release-Prozess (WICHTIG)
 Ein gepushter Git-Tag ist KEIN Release. HACS erkennt nur echte GitHub-Releases.
-Vollständiger Ablauf für jede neue Version:
-1. Version in `custom_components/ha_raiba/manifest.json` erhöhen.
-2. Commit-Message-Format: `vX.Y.Z: <beschreibung>`
-3. `git tag vX.Y.Z`
-4. `git push origin master && git push origin vX.Y.Z`
-5. **GitHub-Release erstellen (NICHT vergessen):**
-   `gh release create vX.Y.Z --repo neo170/ha-raiba --title "vX.Y.Z" --notes "<beschreibung>"`
+Standardablauf fuer ein Patch-Release:
+`./scripts/release.ps1 -Description "<beschreibung>"`
+- Das Skript erhöht die Manifest-Version, committet alle getrackten Änderungen mit `vX.Y.Z: <beschreibung>`, taggt, pusht und erstellt die GitHub-Release.
+- Fuer Minor- oder Major-Releases: `./scripts/release.ps1 -Version X.Y.Z -Description "<beschreibung>"`.
+- Beim ersten Aufruf nimmt das Skript sich selbst automatisch auf. Andere unversionierte Dateien vor dem Aufruf bewusst mit `git add` aufnehmen oder entfernen. `-WhatIf` prueft den Ablauf ohne Aenderungen.
+- Manueller Ablauf nur als Ausnahme: Manifest-Version erhöhen, mit `vX.Y.Z: <beschreibung>` committen, `git tag vX.Y.Z`, `git push origin master`, `git push origin vX.Y.Z`, dann `gh release create vX.Y.Z --repo neo170/ha-raiba --title "vX.Y.Z" --notes "<beschreibung>"`.
 - `gh` CLI ist installiert und authentifiziert.
 - Prüfen mit: `gh release list --repo neo170/ha-raiba`
 - Panel-Cache-Busting: `__init__.py` hängt `?v={manifest version}` an raiba-panel.js → Version-Bump erzwingt Neuladen.
