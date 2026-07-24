@@ -534,12 +534,21 @@ class RaibaPanel extends HTMLElement {
       for (const b of banks) {
         if (b.status === "error") { msg += "\u26A0\uFE0F " + b.name + ": " + (b.error || "Fehler") + "\n"; continue; }
         for (const acc of (b.accounts || [])) {
-          const n = acc.newTransactions || 0;
-          totalNew += n;
-          msg += n > 0 ? acc.accountNumber + ": +" + n + " neu\n" : acc.accountNumber + ": aktuell\n";
+          const booked = Number(acc.newTransactions) || 0;
+          const pending = Number(acc.pendingTransactions) || 0;
+          const accountNew = booked + pending;
+          totalNew += accountNew;
+          if (accountNew > 0) {
+            const details = [];
+            if (booked > 0) details.push("+" + booked + " neu");
+            if (pending > 0) details.push("+" + pending + " vorgemerkt");
+            msg += acc.accountNumber + ": " + details.join(", ") + "\n";
+          } else {
+            msg += acc.accountNumber + ": aktuell\n";
+          }
         }
       }
-      msg += totalNew > 0 ? "\n" + totalNew + " neue Buchungen" : "\nAlles aktuell";
+      msg += totalNew > 0 ? "\n" + totalNew + " neue Umsätze" : "\nAlles aktuell";
       this._showSyncOverlay("\u2713 Sync abgeschlossen\n\n" + msg, 1.0);
       setTimeout(() => { this._hideSyncOverlay(); this._fetchTransactions(); }, 2000);
 
